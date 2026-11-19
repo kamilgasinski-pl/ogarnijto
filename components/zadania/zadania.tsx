@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { MOTYWACJE } from "@/lib/motywacje";
 import { ArkuszWyjatku } from "@/components/dojazdy/arkusz-wyjatku";
 import { AlarmClock, Bus, Car, Check, ChevronDown, ChevronRight, ListChecks, Pencil, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -38,13 +39,60 @@ export type DojazdWiersz = {
   maWyjatek: boolean;
 };
 
+const KOLORY_KONFETTI = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6"];
+
 /** Nagroda po ukończeniu wszystkich zadań na dziś. Własny obrazek: plik public/nagroda.jpg. */
 function Nagroda() {
   const [obrazek, setObrazek] = useState(true);
+  const [haslo, setHaslo] = useState<string | null>(null);
+  const [konfetti, setKonfetti] = useState<
+    { id: number; left: number; dx: number; czas: number; opoznienie: number; kolor: string }[]
+  >([]);
+
+  useEffect(() => {
+    // Losowanie dopiero po zamontowaniu (bez rozjazdu z renderem serwera).
+    let i = Math.floor(Math.random() * MOTYWACJE.length);
+    try {
+      const ostatnie = Number(localStorage.getItem("ogarnijto.motywacja"));
+      if (MOTYWACJE.length > 1 && i === ostatnie) i = (i + 1 + Math.floor(Math.random() * (MOTYWACJE.length - 1))) % MOTYWACJE.length;
+      localStorage.setItem("ogarnijto.motywacja", String(i));
+    } catch {}
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setHaslo(MOTYWACJE[i]);
+    setKonfetti(
+      Array.from({ length: 60 }, (_, id) => ({
+        id,
+        left: Math.random() * 100,
+        dx: Math.round((Math.random() - 0.5) * 200),
+        czas: 2.5 + Math.random() * 2.5,
+        opoznienie: Math.random() * 1.2,
+        kolor: KOLORY_KONFETTI[Math.floor(Math.random() * KOLORY_KONFETTI.length)],
+      })),
+    );
+    /* eslint-enable react-hooks/set-state-in-effect */
+    const koniec = setTimeout(() => setKonfetti([]), 6500);
+    return () => clearTimeout(koniec);
+  }, []);
+
   return (
     <div className="space-y-3 rounded-xl border border-emerald-300 bg-emerald-50 p-5 text-center">
+      {konfetti.map((k) => (
+        <span
+          key={k.id}
+          className="konfetti"
+          aria-hidden
+          style={{
+            left: `${k.left}%`,
+            backgroundColor: k.kolor,
+            animationDuration: `${k.czas}s`,
+            animationDelay: `${k.opoznienie}s`,
+            ["--dx" as string]: `${k.dx}px`,
+          }}
+        />
+      ))}
       <p className="text-4xl motion-safe:animate-bounce" aria-hidden>🏆</p>
       <p className="text-xl font-bold text-emerald-900">Wszystkie zadania ukończone!</p>
+      {haslo && <p className="text-emerald-800">{haslo}</p>}
       {obrazek && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
