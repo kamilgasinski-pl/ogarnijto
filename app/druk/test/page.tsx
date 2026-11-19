@@ -35,10 +35,10 @@ export default async function DrukTestu({ searchParams }: { searchParams: Promis
       </div>
 
       <header className="mb-4 border-b-2 border-gray-800 pb-2">
-        <h1 className="text-2xl font-bold">
-          {test.przedmiot ? `${test.przedmiot}: ` : ""}
-          {test.tytul}
-        </h1>
+        {test.przedmiot && (
+          <p className="text-sm font-bold uppercase tracking-widest text-gray-600">Przedmiot: {test.przedmiot}</p>
+        )}
+        <h1 className="text-2xl font-bold">Sprawdzian: {test.tytul}</h1>
         <div className="mt-2 flex justify-between gap-4 text-sm">
           <span>Imię: ______________________</span>
           <span>Data: ______________</span>

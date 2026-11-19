@@ -11,7 +11,7 @@ import { Input, Label, Textarea } from "@/components/ui/input";
 import { TestPodglad } from "@/components/testy-podglad";
 import { Kadrowanie } from "@/components/testy-kadrowanie";
 
-export function NowyTest({ rodzinaId, rola }: { rodzinaId: string; rola: "uczen" | "rodzic" }) {
+export function NowyTest({ rodzinaId, rola, przedmioty }: { rodzinaId: string; rola: "uczen" | "rodzic"; przedmioty: string[] }) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
   const [zdjecia, setZdjecia] = useState<File[]>([]);
@@ -67,7 +67,8 @@ export function NowyTest({ rodzinaId, rola }: { rodzinaId: string; rola: "uczen"
 
   async function zapisz() {
     if (!wynik) return;
-    if (!tytul.trim()) return setBlad("Podaj tytuł testu, np. „Biologia, komórka roślinna”.");
+    if (!przedmiot.trim()) return setBlad("Podaj przedmiot, np. Chemia.");
+    if (!tytul.trim()) return setBlad("Podaj tytuł testu, np. „Właściwości substancji”.");
     setBlad(null);
     setTrwa(true);
     const id = crypto.randomUUID();
@@ -179,7 +180,12 @@ export function NowyTest({ rodzinaId, rola }: { rodzinaId: string; rola: "uczen"
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="przedmiot">Przedmiot</Label>
-            <Input id="przedmiot" value={przedmiot} onChange={(e) => setPrzedmiot(e.target.value)} placeholder="np. Biologia" />
+            <Input id="przedmiot" list="lista-przedmiotow" required value={przedmiot} onChange={(e) => setPrzedmiot(e.target.value)} placeholder="np. Chemia" />
+            <datalist id="lista-przedmiotow">
+              {przedmioty.map((n) => (
+                <option key={n} value={n} />
+              ))}
+            </datalist>
           </div>
           {liczba("wybor", "Pytań wyboru (A–D)")}
           {liczba("luki", "Luk do uzupełnienia")}
