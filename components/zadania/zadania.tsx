@@ -412,6 +412,13 @@ export function Zadania({
             ({ukryte} {ukryte === 1 ? "zadanie innej osoby ukryte" : "zadań innych osób ukrytych"})
           </span>
         )}
+        <Link
+          href={`/druk/zadania?zakres=dzis&kto=${filtr}`}
+          target="_blank"
+          className="ml-auto rounded-full border border-gray-300 bg-white px-3 py-1 hover:bg-gray-100"
+        >
+          Drukuj / PDF
+        </Link>
       </div>
 
       {tresc}
