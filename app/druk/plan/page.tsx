@@ -57,7 +57,7 @@ export default async function DrukPlanu({ searchParams }: Props) {
     : `Plan zajęć · tydzień ${info.numer} (${dzienMiesiac(info.start)}–${dzienMiesiac(info.koniec)})`;
 
   return (
-    <main className="mx-auto max-w-[1100px] p-4 print:max-w-none print:p-0" style={{ printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}>
+    <main className="mx-auto w-full max-w-[1100px] p-4 print:max-w-none print:w-full print:p-0" style={{ printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}>
       <style href="druk-plan" precedence="default">{`@page { size: A4 landscape; margin: 10mm; } @media print { body { background: #fff !important; } }`}</style>
 
       <div className="mb-3 flex items-center justify-between print:mb-2">
