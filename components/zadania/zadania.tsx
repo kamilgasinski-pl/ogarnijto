@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ArkuszWyjatku } from "@/components/dojazdy/arkusz-wyjatku";
 import { AlarmClock, Bus, Car, Check, ListChecks, Pencil, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
@@ -34,9 +35,10 @@ export type DojazdWiersz = {
   przypisano_id: string | null;
   odwolany: boolean;
   zmieniony: boolean;
+  maWyjatek: boolean;
 };
 
-function WierszDojazdu({ d }: { d: DojazdWiersz }) {
+function WierszDojazdu({ d, onEdytuj }: { d: DojazdWiersz; onEdytuj: () => void }) {
   const Ikona = d.rodzaj === "autobus" ? Bus : Car;
   return (
     <li className={`flex items-center gap-2 rounded-lg border border-dashed border-sky-400 bg-sky-50 px-3 py-2 text-sm text-sky-950 ${d.odwolany ? "opacity-50" : ""}`}>
@@ -48,6 +50,14 @@ function WierszDojazdu({ d }: { d: DojazdWiersz }) {
       <span className={`font-medium ${d.odwolany ? "line-through" : ""}`}>{d.tytul}</span>
       {d.zmieniony && <span className="rounded bg-amber-100 px-1 text-[11px] text-amber-800">zmiana</span>}
       {d.odwolany && <span className="text-[11px]">odwołany</span>}
+      <button
+        aria-label="Zmień ten dojazd"
+        title="Zmień na ten dzień"
+        onClick={onEdytuj}
+        className="ml-auto rounded-full p-1 text-sky-700 hover:bg-sky-100"
+      >
+        <Pencil size={16} />
+      </button>
     </li>
   );
 }
@@ -109,6 +119,7 @@ export function Zadania({
 
   // Domyślny widok: dziecko widzi swoje zadania, rodzic wszystkie. Wybór
   // użytkownika jest zapamiętany w tej przeglądarce.
+  const [dojazdEdycja, setDojazdEdycja] = useState<DojazdWiersz | null>(null);
   const [filtr, setFiltr] = useState<"wszystkie" | "moje">(rola === "uczen" ? "moje" : "wszystkie");
   const kluczFiltra = `ogarnijto.filtr.${mojeId}`;
   useEffect(() => {
@@ -183,7 +194,7 @@ export function Zadania({
         ) : (
           <ul className="space-y-1.5">
             {doj.map((x) => (
-              <WierszDojazdu key={x.id + x.data} d={x} />
+              <WierszDojazdu key={x.id + x.data} d={x} onEdytuj={() => setDojazdEdycja(x)} />
             ))}
             {lista.map((z) => (
               <Wiersz
@@ -243,7 +254,7 @@ export function Zadania({
               ) : (
                 <ul className="space-y-1.5">
                   {doj.map((x) => (
-                    <WierszDojazdu key={x.id + x.data} d={x} />
+                    <WierszDojazdu key={x.id + x.data} d={x} onEdytuj={() => setDojazdEdycja(x)} />
                   ))}
                   {lista.map((z) => (
                     <Wiersz
@@ -312,6 +323,22 @@ export function Zadania({
   }
 
   const edytowane = zadania.find((z) => z.id === edycja);
+  const arkuszDojazdu = dojazdEdycja && (
+    <ArkuszWyjatku
+      key={dojazdEdycja.id + dojazdEdycja.data}
+      onZamknij={() => setDojazdEdycja(null)}
+      cel={{
+        rodzinaId,
+        dojazdId: dojazdEdycja.id,
+        tytul: dojazdEdycja.tytul,
+        data: dojazdEdycja.data,
+        start: dojazdEdycja.start,
+        koniec: dojazdEdycja.koniec,
+        odwolany: dojazdEdycja.odwolany,
+        maWyjatek: dojazdEdycja.maWyjatek,
+      }}
+    />
+  );
 
   return (
     <div className="space-y-5">
@@ -356,6 +383,7 @@ export function Zadania({
       </div>
 
       {tresc}
+      {arkuszDojazdu}
 
       {edytowane && (
         <ArkuszZadania

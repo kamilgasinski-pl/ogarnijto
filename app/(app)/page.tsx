@@ -119,6 +119,7 @@ export default async function Pulpit({
       przypisano_id: w.dojazd.przypisano_id,
       odwolany: w.odwolany,
       zmieniony: w.zmieniony,
+      maWyjatek: !!w.wyjatek,
     }));
 
   return (

@@ -8,6 +8,7 @@ import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, dzienTygodnia, poniedzialek } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import { Czas } from "@/components/ui/czas";
+import { ArkuszWyjatku } from "@/components/dojazdy/arkusz-wyjatku";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { naCzas } from "@/lib/plan";
 import { RODZAJE, wystapienia, type Dojazd, type Rodzaj, type Wyjatek, type Wystapienie } from "@/lib/dojazdy";
@@ -36,7 +37,7 @@ type Szkic = {
   do_dnia: string;
 };
 
-type Zmiana = { w: Wystapienie; od_godz: string; do_godz: string };
+type Zmiana = { w: Wystapienie };
 
 export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, dzis }: Props) {
   const router = useRouter();
@@ -118,26 +119,6 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
     router.refresh();
   }
 
-  async function zapiszWyjatek(w: Wystapienie, pola: { odwolany: boolean; godz_start: string | null; godz_koniec: string | null }) {
-    setBlad(null);
-    setTrwa(true);
-    const { error } = await supabase
-      .from("dojazdy_wyjatki")
-      .upsert({ rodzina_id: rodzinaId, dojazd_id: w.dojazd.id, data: w.data, ...pola }, { onConflict: "dojazd_id,data" });
-    setTrwa(false);
-    if (error) return setBlad(tlumaczBlad(error.message));
-    setZmiana(null);
-    router.refresh();
-  }
-
-  async function przywroc(w: Wystapienie) {
-    if (!w.wyjatek) return;
-    const { error } = await supabase.from("dojazdy_wyjatki").delete().eq("id", w.wyjatek.id);
-    if (error) return setBlad(tlumaczBlad(error.message));
-    setZmiana(null);
-    router.refresh();
-  }
-
   function przelaczDzien(n: number) {
     if (!szkic) return;
     setSzkic({ ...szkic, dni: szkic.dni.includes(n) ? szkic.dni.filter((d) => d !== n) : [...szkic.dni, n] });
@@ -174,9 +155,7 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() =>
-                    setZmiana({ w, od_godz: naCzas(w.start), do_godz: w.koniec != null ? naCzas(w.koniec) : "" })
-                  }
+                  onClick={() => setZmiana({ w })}
                 >
                   Zmień
                 </Button>
@@ -230,49 +209,20 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
       </section>
 
       {zmiana && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center" onClick={(e) => e.target === e.currentTarget && setZmiana(null)}>
-          <div className="w-full space-y-4 rounded-t-2xl bg-white p-5 md:max-w-md md:rounded-2xl">
-            <h2 className="text-lg font-semibold">
-              {zmiana.w.dojazd.tytul}
-              <span className="block text-sm font-normal text-gray-500">
-                {DNI_KROTKO[zmiana.w.dzien - 1]} {dzienMiesiac(zmiana.w.data)} · tylko ten dzień
-              </span>
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Godzina od</Label>
-                <Czas wartosc={zmiana.od_godz} onZmien={(v) => setZmiana({ ...zmiana, od_godz: v })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Godzina do</Label>
-                <Czas opcjonalny wartosc={zmiana.do_godz} onZmien={(v) => setZmiana({ ...zmiana, do_godz: v })} />
-              </div>
-            </div>
-            {blad && <p className="text-sm text-red-600">{blad}</p>}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                disabled={trwa}
-                onClick={() => {
-                  if (zmiana.do_godz && zmiana.do_godz <= zmiana.od_godz) return setBlad("Koniec musi być później niż początek.");
-                  zapiszWyjatek(zmiana.w, { odwolany: false, godz_start: zmiana.od_godz, godz_koniec: zmiana.do_godz || null });
-                }}
-              >
-                Zapisz godzinę
-              </Button>
-              {!zmiana.w.odwolany && (
-                <Button variant="outline" disabled={trwa} onClick={() => zapiszWyjatek(zmiana.w, { odwolany: true, godz_start: null, godz_koniec: null })}>
-                  Odwołaj ten dzień
-                </Button>
-              )}
-              {zmiana.w.wyjatek && (
-                <Button variant="outline" disabled={trwa} onClick={() => przywroc(zmiana.w)}>
-                  Przywróć standard
-                </Button>
-              )}
-              <Button variant="outline" onClick={() => setZmiana(null)}>Zamknij</Button>
-            </div>
-          </div>
-        </div>
+        <ArkuszWyjatku
+          key={zmiana.w.dojazd.id + zmiana.w.data}
+          onZamknij={() => setZmiana(null)}
+          cel={{
+            rodzinaId,
+            dojazdId: zmiana.w.dojazd.id,
+            tytul: zmiana.w.dojazd.tytul,
+            data: zmiana.w.data,
+            start: naCzas(zmiana.w.start),
+            koniec: zmiana.w.koniec != null ? naCzas(zmiana.w.koniec) : null,
+            odwolany: zmiana.w.odwolany,
+            maWyjatek: !!zmiana.w.wyjatek,
+          }}
+        />
       )}
 
       {szkic && (
