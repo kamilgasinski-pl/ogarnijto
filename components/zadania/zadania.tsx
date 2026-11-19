@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlarmClock, Check, ListChecks } from "lucide-react";
+import { AlarmClock, Check, ListChecks, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, etykietaDnia } from "@/lib/dates";
@@ -338,6 +338,14 @@ function Wiersz({
           Przenieś na dziś
         </Button>
       )}
+      <button
+        aria-label="Edytuj zadanie"
+        title="Edytuj"
+        onClick={onOtworz}
+        className="mt-0.5 shrink-0 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-900"
+      >
+        <Pencil size={16} />
+      </button>
     </li>
   );
 }
