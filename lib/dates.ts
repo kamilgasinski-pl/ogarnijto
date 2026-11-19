@@ -102,3 +102,20 @@ export function jutroDlaWidoku(dzisiajIso: string): string {
   if (d >= 5) return dodajDni(dzisiajIso, 8 - d);
   return dodajDni(dzisiajIso, 1);
 }
+
+const DNI_WIELKIE = [
+  "Poniedziałek",
+  "Wtorek",
+  "Środa",
+  "Czwartek",
+  "Piątek",
+  "Sobota",
+  "Niedziela",
+];
+
+/** "Dziś", "Jutro" albo "Poniedziałek 23.11". */
+export function etykietaDnia(iso: string, dzisiajIso: string): string {
+  if (iso === dzisiajIso) return "Dziś";
+  if (iso === dodajDni(dzisiajIso, 1)) return "Jutro";
+  return `${DNI_WIELKIE[dzienTygodnia(iso) - 1]} ${dzienMiesiac(iso)}`;
+}
