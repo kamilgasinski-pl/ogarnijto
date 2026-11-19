@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Bus, Car, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
-import { dodajDni, dzienMiesiac, dzienTygodnia } from "@/lib/dates";
+import { dodajDni, dzienMiesiac, dzienTygodnia, poniedzialek } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import { Czas } from "@/components/ui/czas";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
@@ -61,7 +61,7 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
       od_godz: "15:00",
       do_godz: "",
       kto: "",
-      od: dzis,
+      od: poniedzialek(dzis), // by objąć też bieżący tydzień
       do_dnia: "",
     });
   }

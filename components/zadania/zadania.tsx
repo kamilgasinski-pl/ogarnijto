@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlarmClock, Check, ListChecks, Pencil, Repeat } from "lucide-react";
+import { AlarmClock, Bus, Car, Check, ListChecks, Pencil, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, etykietaDnia } from "@/lib/dates";
@@ -23,6 +23,35 @@ import {
 } from "@/lib/zadania";
 import { ArkuszZadania } from "./arkusz-zadania";
 
+/** Dojazd na konkretny dzień (tylko do odczytu), pokazywany obok zadań. */
+export type DojazdWiersz = {
+  id: string;
+  data: string;
+  rodzaj: "autobus" | "odwoz";
+  tytul: string;
+  start: string;
+  koniec: string | null;
+  przypisano_id: string | null;
+  odwolany: boolean;
+  zmieniony: boolean;
+};
+
+function WierszDojazdu({ d }: { d: DojazdWiersz }) {
+  const Ikona = d.rodzaj === "autobus" ? Bus : Car;
+  return (
+    <li className={`flex items-center gap-2 rounded-lg border border-dashed border-sky-400 bg-sky-50 px-3 py-2 text-sm text-sky-950 ${d.odwolany ? "opacity-50" : ""}`}>
+      <Ikona size={16} className="shrink-0 text-sky-700" />
+      <span className="text-sky-800">
+        {d.start}
+        {d.koniec && `–${d.koniec}`}
+      </span>
+      <span className={`font-medium ${d.odwolany ? "line-through" : ""}`}>{d.tytul}</span>
+      {d.zmieniony && <span className="rounded bg-amber-100 px-1 text-[11px] text-amber-800">zmiana</span>}
+      {d.odwolany && <span className="text-[11px]">odwołany</span>}
+    </li>
+  );
+}
+
 type Props = {
   zadania: Zadanie[];
   podzadania: Podzadanie[];
@@ -37,6 +66,8 @@ type Props = {
   weekend?: { przypisano_id: string | null; wykonawca: Wykonawca }[];
   /** Tydzień pokazywany na pulpicie (poniedziałek–niedziela). */
   tydzien?: { start: string; numer: number; koniec: string; biezacy: boolean };
+  /** Dojazdy (stały rozkład po uwzględnieniu wyjątków) na widoczne dni. */
+  dojazdy?: DojazdWiersz[];
 };
 
 function liczba(n: number) {
@@ -63,6 +94,7 @@ export function Zadania({
   widok,
   weekend = [],
   tydzien,
+  dojazdy = [],
 }: Props) {
   const [supabase] = useState(() => createClient());
   const [zadania, setZadania] = useState(z0);
@@ -134,19 +166,25 @@ export function Zadania({
   const lista0 = zadania.filter(mojeFiltr);
   const widoczne = lista0.filter((z) => pokazWykonane || widok === "pulpit" || z.status === "do_zrobienia");
   const zalegle = lista0.filter((z) => jestZalegle(z, dzis)).sort(sortuj);
+  // Dojazdy podlegają temu samemu filtrowi: "Moje" to te przypisane do mnie.
+  const dojazdyDnia = (d: string) =>
+    dojazdy.filter((x) => x.data === d && (filtr === "wszystkie" || x.przypisano_id === mojeId));
   const weekendLiczba = weekend.filter(mojeFiltr).length;
   const ukryte = zadania.length - lista0.length;
 
-  function sekcja(naglowek: string, lista: Zadanie[], pusto?: string, dodatek?: React.ReactNode) {
+  function sekcja(naglowek: string, lista: Zadanie[], pusto?: string, dodatek?: React.ReactNode, doj: DojazdWiersz[] = []) {
     return (
       <section key={naglowek} className="space-y-2">
         <h2 className="text-sm font-semibold text-gray-700">
           {naglowek} <span className="font-normal text-gray-400">{lista.length > 0 && lista.length}</span>
         </h2>
-        {lista.length === 0 ? (
+        {lista.length === 0 && doj.length === 0 ? (
           pusto && <p className="text-sm text-gray-400">{pusto}</p>
         ) : (
           <ul className="space-y-1.5">
+            {doj.map((x) => (
+              <WierszDojazdu key={x.id + x.data} d={x} />
+            ))}
             {lista.map((z) => (
               <Wiersz
                 key={z.id}
@@ -174,7 +212,7 @@ export function Zadania({
     for (let i = 0; i < 7; i++) {
       const d = dodajDni(t.start, i);
       // sobotę i niedzielę pokazujemy tylko, gdy coś w nie wypada
-      if (i < 5 || lista0.some((z) => z.termin === d)) dni.push(d);
+      if (i < 5 || lista0.some((z) => z.termin === d) || dojazdyDnia(d).length > 0) dni.push(d);
     }
     return (
       <section className="space-y-3 border-t border-gray-200 pt-5">
@@ -193,16 +231,20 @@ export function Zadania({
         </div>
         {dni.map((d) => {
           const lista = lista0.filter((z) => z.termin === d).sort(sortuj);
+          const doj = dojazdyDnia(d);
           return (
             <div key={d} className="space-y-1.5">
               <h3 className={`text-sm font-semibold ${d === dzis ? "text-gray-900" : "text-gray-600"}`}>
                 {etykietaDnia(d, dzis)}
                 {d === dzis || d === jutro ? <span className="ml-1 font-normal text-gray-400">{dzienMiesiac(d)}</span> : null}
               </h3>
-              {lista.length === 0 ? (
+              {lista.length === 0 && doj.length === 0 ? (
                 <p className="text-sm text-gray-300">—</p>
               ) : (
                 <ul className="space-y-1.5">
+                  {doj.map((x) => (
+                    <WierszDojazdu key={x.id + x.data} d={x} />
+                  ))}
                   {lista.map((z) => (
                     <Wiersz
                       key={z.id}
@@ -232,7 +274,7 @@ export function Zadania({
     tresc = (
       <>
         {zalegle.length > 0 && sekcja("Zaległe", zalegle)}
-        {sekcja("Dziś", dzisL, "Nic na dziś. Można odpocząć albo dodać zadanie.")}
+        {sekcja("Dziś", dzisL, "Nic na dziś. Można odpocząć albo dodać zadanie.", undefined, dojazdyDnia(dzis))}
         {sekcja(
           etykietaDnia(jutro, dzis),
           jutroL,
@@ -242,6 +284,7 @@ export function Zadania({
               + {liczba(weekendLiczba)} w weekend
             </Link>
           ),
+          dojazdyDnia(jutro),
         )}
         {tydzien && widokTygodnia(tydzien)}
       </>

@@ -1,13 +1,12 @@
 import Link from "next/link";
 import { wymagajRodziny } from "@/lib/auth";
 import { Card, CardTitle } from "@/components/ui/card";
-import { KartaDojazdow } from "@/components/dojazdy/lista";
-import { Zadania } from "@/components/zadania/zadania";
+import { Zadania, type DojazdWiersz } from "@/components/zadania/zadania";
 import {
   dataSlownie,
+  dodajDni,
   dzienTygodnia,
   dzisiaj,
-  etykietaDnia,
   jutroDlaWidoku,
   poniedzialek,
   tydzienISO,
@@ -99,14 +98,28 @@ export default async function Pulpit({
     }));
   }
 
-  // Dojazdy na dziś i jutro: moje oraz bez przypisanej osoby.
+  // Dojazdy na dziś, jutro i wybrany tydzień (filtr Moje/Wszystkie działa po stronie widoku).
+  const odDoj = [dzis, wybrany.start].sort()[0];
+  const doDoj = [jutro, wybrany.koniec].sort().reverse()[0];
   const [{ data: dojDb }, { data: wyjDb }] = await Promise.all([
     supabase.from("dojazdy").select(KOLUMNY_DOJAZDOW),
-    supabase.from("dojazdy_wyjatki").select(KOLUMNY_WYJATKOW).gte("data", dzis).lte("data", jutro),
+    supabase.from("dojazdy_wyjatki").select(KOLUMNY_WYJATKOW).gte("data", odDoj).lte("data", doDoj),
   ]);
-  const dojazdyMoje = wystapienia((dojDb ?? []) as Dojazd[], (wyjDb ?? []) as Wyjatek[], dzis, jutro).filter(
-    (w) => (w.data === dzis || w.data === jutro) && (!w.dojazd.przypisano_id || w.dojazd.przypisano_id === osoba.id),
-  );
+  const widoczneDni = new Set([dzis, jutro]);
+  for (let i = 0; i < 7; i++) widoczneDni.add(dodajDni(wybrany.start, i));
+  const dojazdy: DojazdWiersz[] = wystapienia((dojDb ?? []) as Dojazd[], (wyjDb ?? []) as Wyjatek[], odDoj, doDoj)
+    .filter((w) => widoczneDni.has(w.data))
+    .map((w) => ({
+      id: w.dojazd.id,
+      data: w.data,
+      rodzaj: w.dojazd.rodzaj,
+      tytul: w.dojazd.tytul,
+      start: naCzas(w.start),
+      koniec: w.koniec != null ? naCzas(w.koniec) : null,
+      przypisano_id: w.dojazd.przypisano_id,
+      odwolany: w.odwolany,
+      zmieniony: w.zmieniony,
+    }));
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -117,8 +130,7 @@ export default async function Pulpit({
         </p>
       </div>
       <div className="grid gap-6 md:grid-cols-3">
-        <div className="space-y-6 md:col-span-2">
-          <KartaDojazdow pozycje={dojazdyMoje} nazwaDnia={(d) => etykietaDnia(d, dzis)} />
+        <div className="md:col-span-2">
           <Zadania
             key={wybrany.start}
             zadania={zadania}
@@ -131,6 +143,7 @@ export default async function Pulpit({
             jutro={jutro}
             widok="pulpit"
             weekend={weekend}
+            dojazdy={dojazdy}
             tydzien={{ ...wybrany, biezacy: wybrany.start === tydzien.start }}
           />
         </div>
