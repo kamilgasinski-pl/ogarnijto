@@ -147,7 +147,12 @@ export async function POST(req: Request) {
   for (const model of MODELE) {
     // Przy chwilowym przeciążeniu (503/500) ponawiamy ten sam model, potem bierzemy następny.
     for (let proba = 0; proba < 2; proba++) {
-      if (Date.now() - start > 45000) break;
+      // Cały budżet czasu funkcji to 60 s, więc kończymy wcześniej i zwracamy czytelny błąd.
+      const zostalo = 50000 - (Date.now() - start);
+      if (zostalo < 4000) {
+        ostatniBlad = "Serwery AI odpowiadają zbyt wolno (są przeciążone). Spróbuj za minutę lub użyj generatora podstawowego.";
+        break;
+      }
       let odp: Response;
       try {
         odp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
@@ -157,10 +162,10 @@ export async function POST(req: Request) {
             contents: [{ role: "user", parts: [{ text: instrukcja(tekst, p, przedmiot) }] }],
             generationConfig: { responseMimeType: "application/json", temperature: 0.6 },
           }),
-          signal: AbortSignal.timeout(25000),
+          signal: AbortSignal.timeout(Math.min(25000, zostalo)),
         });
       } catch {
-        ostatniBlad = "AI nie odpowiedziało na czas. Spróbuj ponownie.";
+        ostatniBlad = "AI nie odpowiedziało na czas (serwery są przeciążone). Spróbuj za minutę.";
         break;
       }
 

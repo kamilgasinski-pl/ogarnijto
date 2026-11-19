@@ -70,8 +70,13 @@ export function NowyTest({ rodzinaId, rola, przedmioty }: { rodzinaId: string; r
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tekst, parametry: param, przedmiot }),
       });
-      const dane = await res.json().catch(() => ({}));
-      if (!res.ok) return setBlad(dane.blad ?? "Nie udało się wygenerować testu przez AI.");
+      const dane = await res.json().catch(() => null);
+      if (!res.ok) {
+        return setBlad(
+          dane?.blad ??
+            `Serwer nie odpowiedział poprawnie (kod ${res.status}). Prawdopodobnie AI odpowiadało zbyt długo, spróbuj ponownie za chwilę.`,
+        );
+      }
       setWynik({ pytania: dane.pytania, odpowiedzi: dane.odpowiedzi, uwagi: dane.uwagi ?? [] });
       setAiModel(dane.model ?? "AI");
     } catch {
