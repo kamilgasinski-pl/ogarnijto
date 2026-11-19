@@ -38,6 +38,26 @@ export type DojazdWiersz = {
   maWyjatek: boolean;
 };
 
+/** Nagroda po ukończeniu wszystkich zadań na dziś. Własny obrazek: plik public/nagroda.jpg. */
+function Nagroda() {
+  const [obrazek, setObrazek] = useState(true);
+  return (
+    <div className="space-y-3 rounded-xl border border-emerald-300 bg-emerald-50 p-5 text-center">
+      <p className="text-4xl motion-safe:animate-bounce" aria-hidden>🏆</p>
+      <p className="text-xl font-bold text-emerald-900">Wszystkie zadania ukończone!</p>
+      {obrazek && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src="/nagroda.jpg"
+          alt=""
+          onError={() => setObrazek(false)}
+          className="mx-auto max-h-64 rounded-lg"
+        />
+      )}
+    </div>
+  );
+}
+
 function WierszDojazdu({ d, onEdytuj }: { d: DojazdWiersz; onEdytuj: () => void }) {
   const Ikona = d.rodzaj === "autobus" ? Bus : Car;
   return (
@@ -313,6 +333,7 @@ export function Zadania({
     tresc = (
       <>
         {zalegle.length > 0 && sekcja("Zaległe", zalegle)}
+        {zalegle.length === 0 && dzisL.length > 0 && dzisL.every((z) => z.status === "zrobione") && <Nagroda />}
         {sekcja("Dziś", dzisL, "Nic na dziś. Można odpocząć albo dodać zadanie.", undefined, dojazdyDnia(dzis))}
         {sekcja(
           etykietaDnia(jutro, dzis),
