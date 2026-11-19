@@ -4,6 +4,7 @@ import { wymagajRodziny } from "@/lib/auth";
 
 const linki = [
   { href: "/", etykieta: "Pulpit", ikona: Home },
+  { href: "/plan", etykieta: "Plan zajęć", ikona: CalendarDays },
   { href: "/rodzina", etykieta: "Rodzina", ikona: Users },
 ];
 
@@ -20,9 +21,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <Ikona size={16} /> {etykieta}
             </Link>
           ))}
-          <span className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400">
-            <CalendarDays size={16} /> Plan zajęć <em className="text-xs">wkrótce</em>
-          </span>
         </nav>
         <p className="mb-2 px-3 text-sm text-gray-500">{osoba.imie}</p>
         <form action="/auth/signout" method="post">
