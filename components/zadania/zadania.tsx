@@ -392,7 +392,7 @@ export function Zadania({
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-gray-500">Pokaż:</span>
-        <div className="flex rounded-full bg-gray-200 p-0.5">
+        <div className="flex rounded-full border border-gray-300 bg-white p-0.5">
           {[
             { wartosc: "moje", etykieta: "Moje" },
             ...osoby.filter((o) => o.id !== mojeId).map((o) => ({ wartosc: o.id, etykieta: o.imie })),
@@ -401,7 +401,7 @@ export function Zadania({
             <button
               key={f.wartosc}
               onClick={() => ustawFiltr(f.wartosc)}
-              className={`rounded-full px-4 py-1 ${filtr === f.wartosc ? "bg-gray-900 text-white" : "text-gray-700"}`}
+              className={`rounded-full px-4 py-1 ${filtr === f.wartosc ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"}`}
             >
               {f.etykieta}
             </button>
