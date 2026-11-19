@@ -58,7 +58,7 @@ export default async function DrukPlanu({ searchParams }: Props) {
 
   return (
     <main className="mx-auto max-w-[1100px] p-4 print:max-w-none print:p-0" style={{ printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}>
-      <style>{`@page { size: A4 landscape; margin: 10mm; } @media print { body { background: #fff !important; } }`}</style>
+      <style href="druk-plan" precedence="default">{`@page { size: A4 landscape; margin: 10mm; } @media print { body { background: #fff !important; } }`}</style>
 
       <div className="mb-3 flex items-center justify-between print:mb-2">
         <h1 className="text-xl font-bold">{tytul}</h1>
