@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { CalendarDays, ClipboardPaste, Home, ListChecks, LogOut, Users } from "lucide-react";
+import { CalendarDays, ClipboardPaste, Home, ListChecks, LogOut, Repeat, Users } from "lucide-react";
 import { wymagajRodziny } from "@/lib/auth";
 
 const linki = [
   { href: "/", etykieta: "Pulpit", ikona: Home },
   { href: "/zadania", etykieta: "Zadania", ikona: ListChecks },
+  { href: "/powtarzalne", etykieta: "Powtarzalne", ikona: Repeat },
   { href: "/plan", etykieta: "Plan zajęć", ikona: CalendarDays },
   { href: "/import", etykieta: "Import", ikona: ClipboardPaste },
   { href: "/rodzina", etykieta: "Rodzina", ikona: Users },
@@ -36,12 +37,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
       <nav className="fixed inset-x-0 bottom-0 flex justify-around border-t border-gray-200 bg-white py-2 md:hidden">
         {linki.map(({ href, etykieta, ikona: Ikona }) => (
-          <Link key={href} href={href} className="flex flex-col items-center gap-0.5 px-4 text-xs text-gray-700">
+          <Link key={href} href={href} className="flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 text-[10px] text-gray-700">
             <Ikona size={20} /> {etykieta}
           </Link>
         ))}
-        <form action="/auth/signout" method="post">
-          <button className="flex flex-col items-center gap-0.5 px-4 text-xs text-gray-700">
+        <form action="/auth/signout" method="post" className="flex min-w-0 flex-1">
+          <button className="flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 text-[10px] text-gray-700">
             <LogOut size={20} /> Wyloguj
           </button>
         </form>

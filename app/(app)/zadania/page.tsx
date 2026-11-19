@@ -4,6 +4,7 @@ import { dodajDni, dzisiaj, jutroDlaWidoku } from "@/lib/dates";
 import {
   KOLUMNY_PODZADAN,
   KOLUMNY_ZADAN,
+  type OsobaMini,
   type Podzadanie,
   type Zadanie,
 } from "@/lib/zadania";
@@ -11,6 +12,9 @@ import {
 export default async function ZadaniaPage() {
   const { supabase, osoba } = await wymagajRodziny();
   const dzis = dzisiaj();
+
+  await supabase.rpc("zapewnij_powtarzalne", { p_od: dodajDni(dzis, -14), p_do: dodajDni(dzis, 90) });
+  const { data: osobyDb } = await supabase.from("osoby").select("id, imie, rola").order("created_at");
 
   // Niewykonane (wszystkie) oraz wykonane z ostatnich 14 dni i przyszłości.
   const { data } = await supabase
@@ -40,7 +44,8 @@ export default async function ZadaniaPage() {
         zadania={zadania}
         podzadania={podzadania}
         rodzinaId={osoba.rodzina_id}
-        rola={osoba.rola}
+        osoby={(osobyDb ?? []) as OsobaMini[]}
+        mojeId={osoba.id}
         dzis={dzis}
         jutro={jutroDlaWidoku(dzis)}
         widok="wszystkie"

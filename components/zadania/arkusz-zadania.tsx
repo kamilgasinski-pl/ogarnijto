@@ -5,15 +5,18 @@ import { Check, Plus, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { Button } from "@/components/ui/button";
+import { Czas } from "@/components/ui/czas";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import {
   KATEGORIE,
   TYPY,
-  WYKONAWCY,
+  krotkaGodzina,
+  polaWykonawcy,
+  wartoscOsoby,
   type Kategoria,
+  type OsobaMini,
   type Podzadanie,
   type Typ,
-  type Wykonawca,
   type Zadanie,
 } from "@/lib/zadania";
 
@@ -21,6 +24,7 @@ type Props = {
   zadanie: Zadanie;
   podzadania: Podzadanie[];
   rodzinaId: string;
+  osoby: OsobaMini[];
   onZapisz: (z: Zadanie) => void;
   onUsun: (id: string) => void;
   onPodzadania: (zadanieId: string, lista: Podzadanie[]) => void;
@@ -31,6 +35,7 @@ export function ArkuszZadania({
   zadanie,
   podzadania,
   rodzinaId,
+  osoby,
   onZapisz,
   onUsun,
   onPodzadania,
@@ -38,6 +43,9 @@ export function ArkuszZadania({
 }: Props) {
   const [supabase] = useState(() => createClient());
   const [z, setZ] = useState(zadanie);
+  const [od, setOd] = useState(krotkaGodzina(zadanie.godz_start) ?? "");
+  const [do_, setDo] = useState(krotkaGodzina(zadanie.godz_koniec) ?? "");
+  const [osoba, setOsoba] = useState(wartoscOsoby(zadanie));
   const [lista, setLista] = useState(podzadania);
   const [nowe, setNowe] = useState("");
   const [blad, setBlad] = useState<string | null>(null);
@@ -54,28 +62,46 @@ export function ArkuszZadania({
   async function zapisz(e: React.FormEvent) {
     e.preventDefault();
     if (!z.tytul.trim()) return setBlad("Podaj tytuł zadania.");
+    if (do_ && !od) return setBlad("Ustaw godzinę „od”, jeśli podajesz „do”.");
+    if (od && do_ && do_ <= od) return setBlad("Koniec musi być później niż początek.");
     setTrwa(true);
-    const { error } = await supabase
-      .from("zadania")
-      .update({
-        tytul: z.tytul.trim(),
-        typ: z.typ,
-        termin: z.termin,
-        przedmiot: z.przedmiot?.trim() || null,
-        kategoria: z.kategoria,
-        wykonawca: z.wykonawca,
-        opis: z.opis?.trim() || null,
-      })
-      .eq("id", z.id);
+    const wykonawca = polaWykonawcy(osoba, osoby);
+    const pola = {
+      tytul: z.tytul.trim(),
+      typ: z.typ,
+      termin: z.termin,
+      przedmiot: z.przedmiot?.trim() || null,
+      kategoria: z.kategoria,
+      opis: z.opis?.trim() || null,
+      godz_start: od || null,
+      godz_koniec: do_ || null,
+      ...wykonawca,
+    };
+    const { error } = await supabase.from("zadania").update(pola).eq("id", z.id);
     setTrwa(false);
     if (error) return setBlad(tlumaczBlad(error.message));
-    onZapisz({ ...z, tytul: z.tytul.trim() });
+    onZapisz({
+      ...z,
+      ...pola,
+      godz_start: od ? `${od}:00` : null,
+      godz_koniec: do_ ? `${do_}:00` : null,
+    });
     onZamknij();
   }
 
   async function usunZadanie() {
-    if (!confirm("Usunąć to zadanie razem z zadaniami cząstkowymi?")) return;
-    const { error } = await supabase.from("zadania").delete().eq("id", z.id);
+    const powtarzalne = !!z.powtarzalne_id;
+    if (
+      !confirm(
+        powtarzalne
+          ? "To zadanie powtarza się co tydzień. Pominąć tylko ten termin? (Całą regułę odwołasz w zakładce Powtarzalne.)"
+          : "Usunąć to zadanie razem z zadaniami cząstkowymi?",
+      )
+    )
+      return;
+    const { error } = powtarzalne
+      ? await supabase.rpc("pomin_termin", { p_zadanie: z.id })
+      : await supabase.from("zadania").delete().eq("id", z.id);
     if (error) return setBlad(tlumaczBlad(error.message));
     onUsun(z.id);
     onZamknij();
@@ -172,12 +198,23 @@ export function ArkuszZadania({
             </Select>
           </div>
           <div className="col-span-2 space-y-1.5">
-            <Label htmlFor="wykonawca">Kto ma to zrobić</Label>
-            <Select id="wykonawca" value={z.wykonawca} onChange={(e) => setZ({ ...z, wykonawca: e.target.value as Wykonawca })}>
-              {WYKONAWCY.map((w) => (
-                <option key={w.wartosc} value={w.wartosc}>{w.etykieta}</option>
+            <Label htmlFor="osoba">Kto ma to zrobić</Label>
+            <Select id="osoba" value={osoba} onChange={(e) => setOsoba(e.target.value)}>
+              {osoby.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.imie} ({o.rola === "rodzic" ? "rodzic" : "uczeń"})
+                </option>
               ))}
+              <option value="oba">Oboje</option>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Godzina od</Label>
+            <Czas opcjonalny wartosc={od} onZmien={(v) => { setOd(v); if (v === "") setDo(""); }} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Godzina do</Label>
+            <Czas opcjonalny wartosc={do_} onZmien={setDo} />
           </div>
         </div>
 

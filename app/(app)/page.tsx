@@ -14,6 +14,7 @@ import { naCzas, naMinuty } from "@/lib/plan";
 import {
   KOLUMNY_PODZADAN,
   KOLUMNY_ZADAN,
+  type OsobaMini,
   type Podzadanie,
   type Zadanie,
 } from "@/lib/zadania";
@@ -31,6 +32,12 @@ export default async function Pulpit({
   const poprawna = sp.tydzien && /^\d{4}-\d{2}-\d{2}$/.test(sp.tydzien);
   const wybrany = tydzienISO(poprawna ? sp.tydzien! : dzis);
   const dzienNr = dzienTygodnia(dzis);
+
+  // Zadania z reguł powtarzalnych: dopilnuj, by istniały dla widocznego zakresu.
+  const od = [dzis, wybrany.start].sort()[0];
+  const do_ = [jutro, wybrany.koniec].sort().reverse()[0];
+  await supabase.rpc("zapewnij_powtarzalne", { p_od: od, p_do: do_ });
+  const { data: osobyDb } = await supabase.from("osoby").select("id, imie, rola").order("created_at");
 
   // Zadania: niewykonane do jutra (w tym zaległe) oraz wszystko z dziś i jutra.
   const { data: zad } = await supabase
@@ -103,7 +110,8 @@ export default async function Pulpit({
             zadania={zadania}
             podzadania={podzadania}
             rodzinaId={osoba.rodzina_id}
-            rola={osoba.rola}
+            osoby={(osobyDb ?? []) as OsobaMini[]}
+            mojeId={osoba.id}
             dzis={dzis}
             jutro={jutro}
             widok="pulpit"

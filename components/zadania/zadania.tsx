@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlarmClock, Check, ListChecks, Pencil } from "lucide-react";
+import { AlarmClock, Check, ListChecks, Pencil, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, etykietaDnia } from "@/lib/dates";
@@ -11,10 +11,12 @@ import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
 import {
   KOLUMNY_ZADAN,
-  WYKONAWCY,
   jestZalegle,
+  krotkaGodzina,
+  nazwaWykonawcy,
+  polaWykonawcy,
+  type OsobaMini,
   type Podzadanie,
-  type Wykonawca,
   type Zadanie,
 } from "@/lib/zadania";
 import { ArkuszZadania } from "./arkusz-zadania";
@@ -23,7 +25,8 @@ type Props = {
   zadania: Zadanie[];
   podzadania: Podzadanie[];
   rodzinaId: string;
-  rola: "uczen" | "rodzic";
+  osoby: OsobaMini[];
+  mojeId: string;
   dzis: string;
   jutro: string;
   widok: "pulpit" | "wszystkie";
@@ -41,13 +44,15 @@ function liczba(n: number) {
 const sortuj = (a: Zadanie, b: Zadanie) =>
   Number(a.status === "zrobione") - Number(b.status === "zrobione") ||
   a.termin.localeCompare(b.termin) ||
+  (a.godz_start ?? "99").localeCompare(b.godz_start ?? "99") ||
   a.tytul.localeCompare(b.tytul, "pl");
 
 export function Zadania({
   zadania: z0,
   podzadania: p0,
   rodzinaId,
-  rola,
+  osoby,
+  mojeId,
   dzis,
   jutro,
   widok,
@@ -63,7 +68,7 @@ export function Zadania({
 
   const [tytul, setTytul] = useState("");
   const [termin, setTermin] = useState(dzis);
-  const [wykonawca, setWykonawca] = useState<Wykonawca>(rola === "rodzic" ? "rodzic" : "dziecko");
+  const [kto, setKto] = useState(mojeId);
 
   const podDla = (id: string) => podzadania.filter((p) => p.zadanie_id === id);
 
@@ -74,7 +79,7 @@ export function Zadania({
     setBlad(null);
     const { data, error } = await supabase
       .from("zadania")
-      .insert({ rodzina_id: rodzinaId, tytul: t, termin, wykonawca })
+      .insert({ rodzina_id: rodzinaId, tytul: t, termin, ...polaWykonawcy(kto, osoby) })
       .select(KOLUMNY_ZADAN)
       .single();
     if (error) return setBlad(tlumaczBlad(error.message));
@@ -118,6 +123,7 @@ export function Zadania({
                 key={z.id}
                 z={z}
                 podzadania={podDla(z.id)}
+                osoby={osoby}
                 zalegle={jestZalegle(z, dzis)}
                 dzis={dzis}
                 onStatus={ustawStatus}
@@ -173,6 +179,7 @@ export function Zadania({
                       key={z.id}
                       z={z}
                       podzadania={podDla(z.id)}
+                      osoby={osoby}
                       zalegle={false}
                       dzis={dzis}
                       onStatus={ustawStatus}
@@ -245,10 +252,11 @@ export function Zadania({
             onChange={(e) => setTytul(e.target.value)}
           />
           <Input type="date" required className="w-40" value={termin} onChange={(e) => setTermin(e.target.value)} aria-label="Termin" />
-          <Select className="w-32" value={wykonawca} onChange={(e) => setWykonawca(e.target.value as Wykonawca)} aria-label="Kto">
-            {WYKONAWCY.map((w) => (
-              <option key={w.wartosc} value={w.wartosc}>{w.etykieta}</option>
+          <Select className="w-36" value={kto} onChange={(e) => setKto(e.target.value)} aria-label="Kto">
+            {osoby.map((o) => (
+              <option key={o.id} value={o.id}>{o.imie}</option>
             ))}
+            <option value="oba">Oboje</option>
           </Select>
           <Button type="submit">Dodaj</Button>
         </form>
@@ -263,6 +271,7 @@ export function Zadania({
           zadanie={edytowane}
           podzadania={podDla(edytowane.id)}
           rodzinaId={rodzinaId}
+          osoby={osoby}
           onZapisz={(z) => setZadania((s) => s.map((x) => (x.id === z.id ? z : x)))}
           onUsun={(id) => setZadania((s) => s.filter((x) => x.id !== id))}
           onPodzadania={(id, lista) =>
@@ -278,6 +287,7 @@ export function Zadania({
 function Wiersz({
   z,
   podzadania,
+  osoby,
   zalegle,
   dzis,
   onStatus,
@@ -286,6 +296,7 @@ function Wiersz({
 }: {
   z: Zadanie;
   podzadania: Podzadanie[];
+  osoby: OsobaMini[];
   zalegle: boolean;
   dzis: string;
   onStatus: (z: Zadanie, s: Zadanie["status"]) => void;
@@ -295,7 +306,9 @@ function Wiersz({
   const zrobione = z.status === "zrobione";
   const umiem = podzadania.filter((p) => p.wykonane).length;
   const test = z.typ !== "zwykle";
-  const wykonawca = WYKONAWCY.find((w) => w.wartosc === z.wykonawca)?.etykieta;
+  const wykonawca = nazwaWykonawcy(z, osoby);
+  const od = krotkaGodzina(z.godz_start);
+  const do_ = krotkaGodzina(z.godz_koniec);
 
   return (
     <li
@@ -320,6 +333,13 @@ function Wiersz({
               {z.typ === "sprawdzian" ? "Sprawdzian" : "Kartkówka"}
             </span>
           )}
+          {od && (
+            <span className="font-medium text-gray-700">
+              {od}
+              {do_ && `–${do_}`}
+            </span>
+          )}
+          {z.powtarzalne_id && <Repeat size={12} aria-label="Powtarza się" />}
           {z.przedmiot && <span>{z.przedmiot}</span>}
           {zalegle && <span className="text-red-600">z {dzienMiesiac(z.termin)}</span>}
           {wykonawca && <span>· {wykonawca}</span>}
