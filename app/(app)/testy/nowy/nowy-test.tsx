@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { rozpoznajBloki } from "@/lib/ocr";
-import { DOMYSLNE, generujTest, type Parametry, type WynikGeneracji } from "@/lib/testy";
+import { DOMYSLNE, generujTest, type Odpowiedz, type Parametry, type Pytanie, type WynikGeneracji } from "@/lib/testy";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { TestPodglad } from "@/components/testy-podglad";
 import { Kadrowanie } from "@/components/testy-kadrowanie";
+import { EdytorPytania } from "@/components/testy-edytor";
 
 export function NowyTest({ rodzinaId, rola, przedmioty }: { rodzinaId: string; rola: "uczen" | "rodzic"; przedmioty: string[] }) {
   const router = useRouter();
@@ -25,6 +26,7 @@ export function NowyTest({ rodzinaId, rola, przedmioty }: { rodzinaId: string; r
   const [param, setParam] = useState<Parametry>(DOMYSLNE);
   const [wynik, setWynik] = useState<WynikGeneracji | null>(null);
   const [blad, setBlad] = useState<string | null>(null);
+  const [edytowane, setEdytowane] = useState<string | null>(null);
   const [trwa, setTrwa] = useState(false);
 
   function dodajBlok(plik: Blob, wyciety: boolean) {
@@ -63,6 +65,20 @@ export function NowyTest({ rodzinaId, rola, przedmioty }: { rodzinaId: string; r
     const w = generujTest(tekst, param, Math.floor(Math.random() * 2 ** 31));
     if (w.pytania.length === 0) return setBlad(w.uwagi[0] ?? "Nie udało się ułożyć pytań z tego tekstu.");
     setWynik(w);
+  }
+
+  function zmienPytanie(p: Pytanie, o: Odpowiedz) {
+    setWynik((w) =>
+      w && {
+        ...w,
+        pytania: w.pytania.map((x) => (x.id === p.id ? p : x)),
+        odpowiedzi: w.odpowiedzi.map((x) => (x.id === o.id ? o : x)),
+      },
+    );
+  }
+  function usunPytanie(id: string) {
+    if (!confirm("Usunąć to pytanie z testu?")) return;
+    setWynik((w) => w && { ...w, pytania: w.pytania.filter((x) => x.id !== id), odpowiedzi: w.odpowiedzi.filter((x) => x.id !== id) });
   }
 
   async function zapisz() {
@@ -197,6 +213,11 @@ export function NowyTest({ rodzinaId, rola, przedmioty }: { rodzinaId: string; r
         </Button>
       </section>
 
+      {wynik && edytowane && (() => {
+        const p = wynik.pytania.find((x) => x.id === edytowane);
+        const o = wynik.odpowiedzi.find((x) => x.id === edytowane);
+        return p && o ? <EdytorPytania key={edytowane} pytanie={p} odpowiedz={o} onZapisz={zmienPytanie} onZamknij={() => setEdytowane(null)} /> : null;
+      })()}
       {kadruj && <Kadrowanie plik={kadruj} onDodaj={dodajBlok} onZamknij={() => setKadruj(null)} />}
       {blad && <p className="text-sm text-red-600">{blad}</p>}
 
@@ -204,7 +225,13 @@ export function NowyTest({ rodzinaId, rola, przedmioty }: { rodzinaId: string; r
         <section className="space-y-3">
           <h2 className="font-semibold">3. Podgląd ({wynik.pytania.length} pytań)</h2>
           {wynik.uwagi.length > 0 && <p className="text-sm text-amber-700">{wynik.uwagi.join(" ")}</p>}
-          <TestPodglad pytania={wynik.pytania} odpowiedzi={rola === "rodzic" ? wynik.odpowiedzi : undefined} />
+          <TestPodglad
+            pytania={wynik.pytania}
+            odpowiedzi={rola === "rodzic" ? wynik.odpowiedzi : undefined}
+            onEdytuj={rola === "rodzic" ? setEdytowane : undefined}
+            onUsun={rola === "rodzic" ? usunPytanie : undefined}
+          />
+          {rola !== "rodzic" && <p className="text-xs text-gray-500">Edytować pytania mogą rodzice.</p>}
           <div className="flex gap-2">
             <Button onClick={zapisz} disabled={trwa}>{trwa ? "Zapisuję…" : "Zapisz test"}</Button>
             <Button variant="outline" onClick={generuj}>Inny zestaw</Button>

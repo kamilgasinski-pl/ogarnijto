@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { wymagajRodziny } from "@/lib/auth";
 import { TestPodglad } from "@/components/testy-podglad";
+import { TestEdycja } from "./test-edycja";
 import type { Odpowiedz, Pytanie } from "@/lib/testy";
 import { UsunTest } from "./usun-test";
 
@@ -31,7 +32,11 @@ export default async function TestPage({ params }: { params: Promise<{ id: strin
         {rodzic && <UsunTest id={id} />}
       </div>
       {rodzic && odpowiedzi && <p className="text-sm text-emerald-700">Klucz odpowiedzi jest widoczny tylko dla rodziców.</p>}
-      <TestPodglad pytania={test.pytania as Pytanie[]} odpowiedzi={rodzic ? odpowiedzi : undefined} />
+      {rodzic && odpowiedzi ? (
+        <TestEdycja id={id} pytania={test.pytania as Pytanie[]} odpowiedzi={odpowiedzi} />
+      ) : (
+        <TestPodglad pytania={test.pytania as Pytanie[]} />
+      )}
     </div>
   );
 }
