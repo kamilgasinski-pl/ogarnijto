@@ -337,27 +337,49 @@ export function generujTest(surowy: string, zadane: Parametry = DOMYSLNE, ziarno
   let nr = 0;
   const id = () => `q${++nr}`;
 
-  // 1. Wybór: najpierw z definicji, potem z luk w zdaniach.
-  let zrobioneWybor = 0;
+  // Definicje są podstawą testu: z każdej da się ułożyć kilka różnych pytań, a pojedyncza definicja
+  // trafia do najwyżej dwóch z nich. Reszta pytań powstaje ze zwykłych zdań.
   const uzyteDef = new Set<string>();
-  const defDoWyboru = tasuj(definicje, los);
-  for (const d of defDoWyboru) {
-    if (zrobioneWybor >= Math.floor(p.wybor / 3)) break;
+  const licznik = new Map<string, number>();
+  const bezOczywistosci = (d: Definicja) => !d.opis.toLowerCase().includes(d.pojecie.toLowerCase().slice(0, 5));
+  const opisOpcji = (d: Definicja) =>
+    (d.lacznik === "oznacza" || d.lacznik === "polega na" ? `${d.lacznik} ` : "") + skroc(d.opis.replace(/^to\s+/iu, ""), 95);
+  // Podobna forma gramatyczna (początek opisu) nie zdradza poprawnej odpowiedzi.
+  const forma = (d: Definicja) => d.opis.replace(/^to\s+/iu, "").split(/\s+/)[0].slice(-2).toLowerCase();
+  const wolne = () =>
+    tasuj(definicje, los)
+      .filter((d) => (licznik.get(d.pojecie) ?? 0) < 2)
+      .sort((x, y) => (licznik.get(x.pojecie) ?? 0) - (licznik.get(y.pojecie) ?? 0));
+  const zuzyjDef = (d: Definicja) => {
+    licznik.set(d.pojecie, (licznik.get(d.pojecie) ?? 0) + 1);
+    uzyteDef.add(d.pojecie);
+    const i = zdania.indexOf(d.zdanie);
+    if (i >= 0) uzyte.add(i);
+  };
+
+  // 1. Wybór z definicji: „Co to jest X?” albo „Które pojęcie opisuje…?” (na przemian).
+  let zrobioneWybor = 0;
+  for (const d of wolne()) {
+    if (zrobioneWybor >= p.wybor) break;
     const inne = definicje.filter((x) => x.pojecie !== d.pojecie);
     if (inne.length < 3) break;
-    // Wolimy wyróżniki o tym samym łączniku (to / jest / są), by forma nie zdradzała odpowiedzi.
-    const dyst = tasuj(inne, los)
-      .sort((x, y) => Number(y.lacznik === d.lacznik) - Number(x.lacznik === d.lacznik))
-      .slice(0, 3)
-      .map((x) => `${x.lacznik} ${skroc(x.opis)}`);
-    const z = zlozOpcje(`${d.lacznik} ${skroc(d.opis)}`, dyst, los);
-    const i = zdania.indexOf(d.zdanie);
-    if (!z || i < 0 || uzyte.has(i)) continue;
-    uzyte.add(i);
-    uzyteDef.add(d.pojecie);
+    const podobne = tasuj(inne, los).sort(
+      (x, y) =>
+        Number(forma(y) === forma(d)) * 2 + Number(y.lacznik === d.lacznik) - (Number(forma(x) === forma(d)) * 2 + Number(x.lacznik === d.lacznik)),
+    );
     const q = id();
-    pytania.push({ id: q, typ: "wybor", tresc: `Wybierz poprawne dokończenie zdania: ${d.pojecie} …`, opcje: z.opcje });
-    odpowiedzi.push({ id: q, tekst: z.opcje[z.poprawna], poprawna: z.poprawna });
+    if (zrobioneWybor % 2 === 0 || !bezOczywistosci(d)) {
+      const z = zlozOpcje(opisOpcji(d), podobne.slice(0, 3).map(opisOpcji), los);
+      if (!z) continue;
+      pytania.push({ id: q, typ: "wybor", tresc: `Co to jest: ${d.pojecie}?`, opcje: z.opcje });
+      odpowiedzi.push({ id: q, tekst: z.opcje[z.poprawna], poprawna: z.poprawna });
+    } else {
+      const z = zlozOpcje(d.pojecie, podobne.slice(0, 3).map((x) => x.pojecie), los);
+      if (!z) continue;
+      pytania.push({ id: q, typ: "wybor", tresc: `Które pojęcie odpowiada opisowi: „${skroc(d.opis, 150)}”?`, opcje: z.opcje });
+      odpowiedzi.push({ id: q, tekst: z.opcje[z.poprawna], poprawna: z.poprawna });
+    }
+    zuzyjDef(d);
     zrobioneWybor++;
   }
   for (const i of kolejnosc) {
@@ -380,6 +402,15 @@ export function generujTest(surowy: string, zadane: Parametry = DOMYSLNE, ziarno
 
   // 2. Luki.
   let luki = 0;
+  for (const d of wolne()) {
+    if (luki >= p.luki) break;
+    if (!bezOczywistosci(d)) continue;
+    const q = id();
+    pytania.push({ id: q, typ: "luka", tresc: `${LUKA} ${d.lacznik} ${d.opis}.` });
+    odpowiedzi.push({ id: q, tekst: d.pojecie });
+    zuzyjDef(d);
+    luki++;
+  }
   for (const i of kolejnosc) {
     if (luki >= p.luki) break;
     if (uzyte.has(i)) continue;
@@ -398,6 +429,21 @@ export function generujTest(surowy: string, zadane: Parametry = DOMYSLNE, ziarno
 
   // 3. Prawda / fałsz: co drugie zdanie zafałszowane przez podmianę terminu.
   let pf = 0;
+  for (const d of wolne()) {
+    if (pf >= p.pf) break;
+    const q = id();
+    if (pf % 2 === 0) {
+      pytania.push({ id: q, typ: "pf", tresc: d.zdanie });
+      odpowiedzi.push({ id: q, tekst: "Prawda.", prawda: true });
+    } else {
+      const inny = tasuj(definicje, los).find((x) => x.pojecie !== d.pojecie && x.lacznik === d.lacznik && x.opis !== d.opis);
+      if (!inny) continue;
+      pytania.push({ id: q, typ: "pf", tresc: `${d.pojecie} ${d.lacznik} ${inny.opis}.` });
+      odpowiedzi.push({ id: q, tekst: `Fałsz. Poprawnie: ${d.zdanie}`, prawda: false });
+    }
+    zuzyjDef(d);
+    pf++;
+  }
   for (const i of kolejnosc) {
     if (pf >= p.pf) break;
     if (uzyte.has(i)) continue;
@@ -437,7 +483,7 @@ export function generujTest(surowy: string, zadane: Parametry = DOMYSLNE, ziarno
   for (const d of tasuj(definicje, los).sort((x, y) => Number(uzyteDef.has(x.pojecie)) - Number(uzyteDef.has(y.pojecie)))) {
     if (otw >= p.otwarte) break;
     const q = id();
-    pytania.push({ id: q, typ: "otwarte", tresc: `Wyjaśnij własnymi słowami, co to jest: ${d.pojecie}.`, linie: 3 });
+    pytania.push({ id: q, typ: "otwarte", tresc: `Podaj definicję pojęcia: ${d.pojecie}.`, linie: 3 });
     odpowiedzi.push({ id: q, tekst: d.zdanie });
     otw++;
   }
