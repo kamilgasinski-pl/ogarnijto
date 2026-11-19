@@ -344,7 +344,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                 className="absolute right-1 -translate-y-1/2 text-[10px] text-gray-400"
                 style={{ top: (m - godzOd) * PPM }}
               >
-                {m / 60}:00
+                {String(m / 60).padStart(2, "0")}:00
               </span>
             ))}
           </div>

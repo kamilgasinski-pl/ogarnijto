@@ -142,11 +142,11 @@ export function Arkusz({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="od">Od</Label>
-            <Input id="od" type="time" step={300} required value={od} onChange={(e) => setOd(e.target.value)} />
+            <Czas id="od" wartosc={od} onZmien={setOd} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="do">Do</Label>
-            <Input id="do" type="time" step={300} required value={do_} onChange={(e) => setDo(e.target.value)} />
+            <Czas id="do" wartosc={do_} onZmien={setDo} />
           </div>
         </div>
 
@@ -191,6 +191,40 @@ export function Arkusz({
           <Button type="button" variant="outline" onClick={onZamknij}>Anuluj</Button>
         </div>
       </form>
+    </div>
+  );
+}
+
+const GODZINY = Array.from({ length: 24 }, (_, i) => i);
+const MINUTY = Array.from({ length: 12 }, (_, i) => i * 5);
+const dwie = (n: number) => String(n).padStart(2, "0");
+
+/** Wybór godziny w formacie 24h (niezależnie od ustawień systemu). */
+function Czas({
+  id,
+  wartosc,
+  onZmien,
+}: {
+  id: string;
+  wartosc: string;
+  onZmien: (v: string) => void;
+}) {
+  const [g, m] = wartosc.split(":").map(Number);
+  // Minuty spoza kroku 5 (np. po rozciągnięciu) nadal da się wybrać.
+  const minuty = MINUTY.includes(m) ? MINUTY : [...MINUTY, m].sort((a, b) => a - b);
+  return (
+    <div className="flex items-center gap-1">
+      <Select id={id} className="px-2" value={g} onChange={(e) => onZmien(`${dwie(Number(e.target.value))}:${dwie(m)}`)}>
+        {GODZINY.map((h) => (
+          <option key={h} value={h}>{dwie(h)}</option>
+        ))}
+      </Select>
+      <span>:</span>
+      <Select aria-label="Minuty" className="px-2" value={m} onChange={(e) => onZmien(`${dwie(g)}:${dwie(Number(e.target.value))}`)}>
+        {minuty.map((x) => (
+          <option key={x} value={x}>{dwie(x)}</option>
+        ))}
+      </Select>
     </div>
   );
 }
