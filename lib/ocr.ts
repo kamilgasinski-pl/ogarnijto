@@ -18,6 +18,7 @@ async function przygotuj(plik: Blob, odwroc = false): Promise<Blob> {
 export async function rozpoznajTekst(
   plik: Blob,
   postep: (ulamek: number) => void,
+  opcje: { pasRodzaju?: boolean } = {},
 ): Promise<string> {
   const { createWorker } = await import("tesseract.js");
   const worker = await createWorker("pol", 1, {
@@ -34,7 +35,7 @@ export async function rozpoznajTekst(
     // Nazwa rodzaju wpisu (np. "Sprawdzian") bywa białym napisem na kolorowym
     // tle, którego zwykły odczyt nie widzi. Gdy jej brak, czytamy odwrócone kolory.
     const RODZAJ = /sprawdzian|kartk[oó]wk\w*|praca\s+klasowa/i;
-    if (!RODZAJ.test(tekst)) {
+    if (opcje.pasRodzaju !== false && !RODZAJ.test(tekst)) {
       const druga = await worker.recognize(await przygotuj(plik, true));
       const trafienie = druga.data.text.match(RODZAJ);
       if (trafienie) tekst = `${trafienie[0]}\n${tekst}`;
