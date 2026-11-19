@@ -58,39 +58,10 @@ export function NowyTest({ rodzinaId, rola, przedmioty }: { rodzinaId: string; r
     }
   }
 
-  const [aiTrwa, setAiTrwa] = useState(false);
-  const [aiModel, setAiModel] = useState<string | null>(null);
-
-  async function generujAI() {
-    setBlad(null);
-    setAiTrwa(true);
-    try {
-      const res = await fetch("/api/testy/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tekst, parametry: param, przedmiot }),
-      });
-      const dane = await res.json().catch(() => null);
-      if (!res.ok) {
-        return setBlad(
-          dane?.blad ??
-            `Serwer nie odpowiedział poprawnie (kod ${res.status}). Prawdopodobnie AI odpowiadało zbyt długo, spróbuj ponownie za chwilę.`,
-        );
-      }
-      setWynik({ pytania: dane.pytania, odpowiedzi: dane.odpowiedzi, uwagi: dane.uwagi ?? [] });
-      setAiModel(dane.model ?? "AI");
-    } catch {
-      setBlad("Brak połączenia z serwerem. Spróbuj ponownie.");
-    } finally {
-      setAiTrwa(false);
-    }
-  }
-
   function generuj() {
     setBlad(null);
     const w = generujTest(tekst, param, Math.floor(Math.random() * 2 ** 31));
     if (w.pytania.length === 0) return setBlad(w.uwagi[0] ?? "Nie udało się ułożyć pytań z tego tekstu.");
-    setAiModel(null);
     setWynik(w);
   }
 
@@ -221,18 +192,9 @@ export function NowyTest({ rodzinaId, rola, przedmioty }: { rodzinaId: string; r
           {liczba("pf", "Prawda / fałsz")}
           {liczba("otwarte", "Pytań otwartych")}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={generujAI} disabled={tekst.trim().length < 200 || aiTrwa}>
-            {aiTrwa ? "AI układa test…" : "Wygeneruj test z AI"}
-          </Button>
-          <Button variant="outline" onClick={generuj} disabled={tekst.trim().length < 50 || aiTrwa}>
-            Generator podstawowy
-          </Button>
-        </div>
-        <p className="text-xs text-gray-500">
-          „Z AI” wysyła sam tekst rozdziału (bez imion) do Google Gemini. W wersji darmowej Google może używać go do
-          ulepszania swoich usług. Generator podstawowy działa lokalnie i nic nie wysyła.
-        </p>
+        <Button onClick={generuj} disabled={tekst.trim().length < 50}>
+          {wynik ? "Wygeneruj inny zestaw" : "Wygeneruj test"}
+        </Button>
       </section>
 
       {kadruj && <Kadrowanie plik={kadruj} onDodaj={dodajBlok} onZamknij={() => setKadruj(null)} />}
@@ -241,12 +203,11 @@ export function NowyTest({ rodzinaId, rola, przedmioty }: { rodzinaId: string; r
       {wynik && (
         <section className="space-y-3">
           <h2 className="font-semibold">3. Podgląd ({wynik.pytania.length} pytań)</h2>
-          {aiModel && <p className="text-sm text-gray-500">Ułożone przez AI ({aiModel}). Przejrzyj pytania, bo AI też bywa omylne.</p>}
           {wynik.uwagi.length > 0 && <p className="text-sm text-amber-700">{wynik.uwagi.join(" ")}</p>}
           <TestPodglad pytania={wynik.pytania} odpowiedzi={rola === "rodzic" ? wynik.odpowiedzi : undefined} />
           <div className="flex gap-2">
             <Button onClick={zapisz} disabled={trwa}>{trwa ? "Zapisuję…" : "Zapisz test"}</Button>
-            <Button variant="outline" onClick={aiModel ? generujAI : generuj} disabled={aiTrwa}>Inny zestaw</Button>
+            <Button variant="outline" onClick={generuj}>Inny zestaw</Button>
           </div>
         </section>
       )}
