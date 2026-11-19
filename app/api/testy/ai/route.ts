@@ -5,7 +5,7 @@ import { LUKA, type Odpowiedz, type Parametry, type Pytanie } from "@/lib/testy"
 // Generowanie testu przez Google Gemini (darmowy poziom). Klucz jest tylko na serwerze.
 export const maxDuration = 60;
 
-const MODELE = (process.env.GEMINI_MODEL ?? "gemini-3.8-flash,gemini-3.5-flash-lite").split(",").map((m) => m.trim());
+const MODELE = (process.env.GEMINI_MODEL ?? "gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite").split(",").map((m) => m.trim());
 
 type SurowePytanie = {
   typ?: string;
@@ -141,48 +141,72 @@ export async function POST(req: Request) {
   const przedmiot = (body.przedmiot ?? "").trim().slice(0, 60);
 
   let ostatniBlad = "Nie udało się połączyć z AI.";
+  const start = Date.now();
+  const pauza = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
   for (const model of MODELE) {
-    let odp: Response;
-    try {
-      odp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": klucz },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: instrukcja(tekst, p, przedmiot) }] }],
-          generationConfig: { responseMimeType: "application/json", temperature: 0.6 },
-        }),
-        signal: AbortSignal.timeout(55000),
-      });
-    } catch {
-      ostatniBlad = "AI nie odpowiedziało na czas. Spróbuj ponownie.";
-      continue;
-    }
-
-    if (odp.status === 429) {
-      // Limit darmowego poziomu: próbujemy lżejszy model, a gdy też się wyczerpał, informujemy.
-      ostatniBlad = "LIMIT";
-      continue;
-    }
-    if (!odp.ok) {
-      ostatniBlad = odp.status === 400 || odp.status === 403 ? "Klucz AI jest nieprawidłowy lub nie ma uprawnień." : `AI zwróciło błąd (${odp.status}).`;
-      continue;
-    }
-
-    try {
-      const dane = await odp.json();
-      const surowy: string = dane?.candidates?.[0]?.content?.parts?.map((x: { text?: string }) => x.text ?? "").join("") ?? "";
-      const json = JSON.parse(surowy.replace(/^```(?:json)?\s*|\s*```$/g, ""));
-      const wynik = zbuduj(Array.isArray(json?.pytania) ? json.pytania : [], p);
-      if (wynik.pytania.length === 0) {
-        ostatniBlad = "AI nie ułożyło pytań z tego tekstu. Popraw tekst lub użyj generatora podstawowego.";
-        continue;
+    // Przy chwilowym przeciążeniu (503/500) ponawiamy ten sam model, potem bierzemy następny.
+    for (let proba = 0; proba < 2; proba++) {
+      if (Date.now() - start > 45000) break;
+      let odp: Response;
+      try {
+        odp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": klucz },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: instrukcja(tekst, p, przedmiot) }] }],
+            generationConfig: { responseMimeType: "application/json", temperature: 0.6 },
+          }),
+          signal: AbortSignal.timeout(25000),
+        });
+      } catch {
+        ostatniBlad = "AI nie odpowiedziało na czas. Spróbuj ponownie.";
+        break;
       }
-      const uwagi: string[] = [];
-      const oczekiwane = p.wybor + p.luki + p.pf + p.otwarte;
-      if (wynik.pytania.length < oczekiwane) uwagi.push(`AI ułożyło ${wynik.pytania.length} z ${oczekiwane} pytań.`);
-      return NextResponse.json({ ...wynik, uwagi, model });
-    } catch {
-      ostatniBlad = "Nie udało się odczytać odpowiedzi AI. Spróbuj ponownie.";
+
+      if (odp.status === 429) {
+        ostatniBlad = "LIMIT";
+        break; // limit dotyczy modelu, próbujemy następnego
+      }
+      if (!odp.ok) {
+        const szczegol = await odp.json().then((d) => String(d?.error?.message ?? "").slice(0, 160)).catch(() => "");
+        console.error("Gemini", model, odp.status, szczegol);
+        if (odp.status === 503 || odp.status === 500) {
+          ostatniBlad = `Serwery AI są chwilowo przeciążone (${odp.status}). Spróbuj za minutę.`;
+          if (proba === 0) {
+            await pauza(1500);
+            continue;
+          }
+          break;
+        }
+        if (odp.status === 404) {
+          ostatniBlad = `Model ${model} jest niedostępny dla tego klucza.${szczegol ? ` (${szczegol})` : ""}`;
+          break;
+        }
+        ostatniBlad =
+          odp.status === 400 || odp.status === 403
+            ? `Google odrzuciło zapytanie (${odp.status})${szczegol ? `: ${szczegol}` : ""}`
+            : `AI zwróciło błąd (${odp.status}).`;
+        break;
+      }
+
+      try {
+        const dane = await odp.json();
+        const surowy: string = dane?.candidates?.[0]?.content?.parts?.map((x: { text?: string }) => x.text ?? "").join("") ?? "";
+        const json = JSON.parse(surowy.replace(/^```(?:json)?\s*|\s*```$/g, ""));
+        const wynik = zbuduj(Array.isArray(json?.pytania) ? json.pytania : [], p);
+        if (wynik.pytania.length === 0) {
+          ostatniBlad = "AI nie ułożyło pytań z tego tekstu. Popraw tekst lub użyj generatora podstawowego.";
+          break;
+        }
+        const uwagi: string[] = [];
+        const oczekiwane = p.wybor + p.luki + p.pf + p.otwarte;
+        if (wynik.pytania.length < oczekiwane) uwagi.push(`AI ułożyło ${wynik.pytania.length} z ${oczekiwane} pytań.`);
+        return NextResponse.json({ ...wynik, uwagi, model });
+      } catch {
+        ostatniBlad = "Nie udało się odczytać odpowiedzi AI. Spróbuj ponownie.";
+        break;
+      }
     }
   }
 
