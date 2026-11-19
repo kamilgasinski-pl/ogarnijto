@@ -86,6 +86,13 @@ export default async function PlanPage({ searchParams }: Props) {
             <Link href={`/plan?tydzien=${nastepny}`} className={nawig} aria-label="Następny tydzień">→</Link>
           </div>
         )}
+        <Link
+          href={`/druk/plan?${szablon ? "widok=szablon" : `tydzien=${tydzien}`}`}
+          target="_blank"
+          className={`${nawig} ml-auto`}
+        >
+          Drukuj / PDF
+        </Link>
       </div>
 
       <Planer
