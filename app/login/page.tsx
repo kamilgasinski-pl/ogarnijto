@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,6 @@ import { Input, Label } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [rejestracja, setRejestracja] = useState(false);
   const [email, setEmail] = useState("");
   const [haslo, setHaslo] = useState("");
@@ -33,8 +31,7 @@ export default function LoginPage() {
       setTrwa(false);
       if (error) return setBlad(tlumaczBlad(error.message));
       if (data.session) {
-        router.replace("/");
-        router.refresh();
+        window.location.assign("/");
       } else {
         setInfo("Konto utworzone. Kliknij link potwierdzający w wiadomości e-mail, a potem się zaloguj.");
         setRejestracja(false);
@@ -48,8 +45,7 @@ export default function LoginPage() {
     });
     setTrwa(false);
     if (error) return setBlad(tlumaczBlad(error.message));
-    router.replace("/");
-    router.refresh();
+    window.location.assign("/");
   }
 
   return (

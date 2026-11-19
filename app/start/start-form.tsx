@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,6 @@ import { Input, Label, Select } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 
 export function StartForm() {
-  const router = useRouter();
   const [tryb, setTryb] = useState<"nowa" | "dolacz">("nowa");
   const [imie, setImie] = useState("");
   const [nazwa, setNazwa] = useState("");
@@ -29,8 +27,8 @@ export function StartForm() {
         : await supabase.rpc("dolacz_do_rodziny", { p_kod: kod.trim().toUpperCase(), p_imie: imie });
     setTrwa(false);
     if (error) return setBlad(tlumaczBlad(error.message));
-    router.replace("/");
-    router.refresh();
+    // pełne przeładowanie, żeby nie użyć starej, zapamiętanej odpowiedzi serwera
+    window.location.assign("/");
   }
 
   return (
