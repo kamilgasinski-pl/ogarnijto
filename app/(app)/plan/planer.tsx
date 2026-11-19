@@ -381,22 +381,38 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                 ))}
                 {dojazdy
                   .filter((d) => d.dzien === n)
-                  .map((d) => (
-                    <div
-                      key={d.id}
-                      className={`pointer-events-none absolute inset-x-0.5 z-[5] overflow-hidden rounded-md border border-dashed border-sky-400 bg-sky-50 px-1.5 py-0.5 text-[11px] text-sky-900 ${d.odwolany ? "opacity-50" : ""}`}
-                      style={{ top: (d.start - godzOd) * PPM, height: Math.max((d.koniec - d.start) * PPM - 1, 20) }}
-                    >
-                      <p className={`flex items-center gap-1 truncate font-medium ${d.odwolany ? "line-through" : ""}`}>
-                        {d.rodzaj === "autobus" ? <Bus size={11} /> : <Car size={11} />}
-                        {d.tytul}
-                      </p>
-                      <p className="truncate text-sky-700">
-                        {naCzas(d.start)}
-                        {d.odwolany && " · odwołany"}
-                      </p>
-                    </div>
-                  ))}
+                  .map((d) => {
+                    const wys = Math.max((d.koniec - d.start) * PPM - 1, 22);
+                    const Ikona = d.rodzaj === "autobus" ? Bus : Car;
+                    const czas = `${naCzas(d.start)}${d.koniec - d.start > 30 ? `–${naCzas(d.koniec)}` : ""}`;
+                    return (
+                      <div
+                        key={d.id}
+                        className={`pointer-events-none absolute inset-x-0.5 z-[5] overflow-hidden rounded-md border border-dashed border-sky-500 bg-sky-100 px-1.5 text-xs text-sky-950 ${d.odwolany ? "opacity-50" : ""}`}
+                        style={{ top: (d.start - godzOd) * PPM, height: wys }}
+                      >
+                        {wys >= 36 ? (
+                          <div className="pt-0.5">
+                            <p className={`flex items-center gap-1 font-semibold leading-tight ${d.odwolany ? "line-through" : ""}`}>
+                              <Ikona size={12} className="shrink-0" />
+                              <span className="break-words">{d.tytul}</span>
+                            </p>
+                            <p className="text-[11px] text-sky-800">
+                              {czas}
+                              {d.odwolany && " · odwołany"}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className={`flex h-full items-center gap-1 truncate font-semibold ${d.odwolany ? "line-through" : ""}`}>
+                            <Ikona size={12} className="shrink-0" />
+                            <span className="truncate">
+                              {naCzas(d.start)} {d.tytul}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 {bloki
                   .map(widoczny)
                   .filter((b) => b.dzien === n)
