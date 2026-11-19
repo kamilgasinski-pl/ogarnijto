@@ -74,7 +74,7 @@ export function ArkuszZadania({
   }
 
   async function usunZadanie() {
-    if (!confirm("Usunąć to zadanie razem z podzadaniami?")) return;
+    if (!confirm("Usunąć to zadanie razem z zadaniami cząstkowymi?")) return;
     const { error } = await supabase.from("zadania").delete().eq("id", z.id);
     if (error) return setBlad(tlumaczBlad(error.message));
     onUsun(z.id);
@@ -188,7 +188,7 @@ export function ArkuszZadania({
 
         <div className="space-y-2">
           <div className="flex items-baseline justify-between">
-            <Label>{test ? "Umiem (zakres materiału)" : "Podzadania"}</Label>
+            <Label>{test ? "Umiem (zakres materiału)" : "Zadania cząstkowe"}</Label>
             {lista.length > 0 && (
               <span className="text-xs text-gray-500">
                 {umiem}/{lista.length}
@@ -207,7 +207,7 @@ export function ArkuszZadania({
                   {p.wykonane && <Check size={14} />}
                 </button>
                 <span className={`flex-1 ${p.wykonane ? "text-gray-400 line-through" : ""}`}>{p.tresc}</span>
-                <button type="button" aria-label="Usuń podzadanie" className="text-gray-300 hover:text-red-600" onClick={() => usunPodzadanie(p)}>
+                <button type="button" aria-label="Usuń zadanie cząstkowe" className="text-gray-300 hover:text-red-600" onClick={() => usunPodzadanie(p)}>
                   <Trash2 size={14} />
                 </button>
               </li>

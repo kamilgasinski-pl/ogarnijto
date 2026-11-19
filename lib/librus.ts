@@ -64,28 +64,64 @@ export function znajdzDate(tekst: string, dzis: string): string | null {
   return null;
 }
 
-const ETYKIETY = [
-  "data", "termin", "nr lekcji", "lekcja", "nauczyciel", "rodzaj", "kategoria",
-  "typ", "przedmiot", "sala", "opis", "data dodania", "dodał", "dodano",
-  "zakres", "godzina",
-];
+// Etykiety, które w układzie z aplikacji Librusa występują bez dwukropka
+// (np. "Numer lekcji 3 Przedmiot Język niemiecki"): rozpoznajemy je, gdy
+// zaczynają się wielką literą.
+const ETYKIETY_BEZ_DWUKROPKA: Record<string, string> = {
+  "numer lekcji": "nr lekcji",
+  "nr lekcji": "nr lekcji",
+  "data i czas": "data",
+  "data dodania": "data dodania",
+  przedmiot: "przedmiot",
+  nauczyciel: "nauczyciel",
+  opis: "opis",
+  rodzaj: "rodzaj",
+  kategoria: "kategoria",
+  sala: "sala",
+  zakres: "zakres",
+};
+// Te wymagają dwukropka, bo to zwykłe słowa.
+const ETYKIETY_Z_DWUKROPKIEM: Record<string, string> = {
+  data: "data",
+  termin: "termin",
+  typ: "typ",
+  lekcja: "nr lekcji",
+  godzina: "godzina",
+  dodał: "data dodania",
+  dodano: "data dodania",
+};
 
-function polaEtykiet(tekst: string): Map<string, string> {
-  const wynik = new Map<string, string>();
-  const linie = tekst.split("\n");
-  let biezaca: string | null = null;
-  for (const linia of linie) {
-    const m = linia.match(/^\s*([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż ]{2,20}?)\s*:\s*(.*)$/);
-    const nazwa = m?.[1].trim().toLowerCase();
-    if (m && nazwa && ETYKIETY.includes(nazwa)) {
-      biezaca = nazwa;
-      wynik.set(nazwa, [wynik.get(nazwa), m[2]].filter(Boolean).join(" ").trim());
-    } else if (biezaca && linia.trim()) {
-      // kolejne wiersze należą do ostatniej etykiety (np. długi opis)
-      wynik.set(biezaca, `${wynik.get(biezaca) ?? ""} ${linia.trim()}`.trim());
-    }
+const ETYKIETA_RE = new RegExp(
+  `(?<![\\p{L}\\d])(${[
+    ...Object.keys(ETYKIETY_BEZ_DWUKROPKA),
+    ...Object.keys(ETYKIETY_Z_DWUKROPKIEM),
+  ]
+    .sort((a, b) => b.length - a.length)
+    .join("|")})(\\s*:)?(?![\\p{L}\\d])`,
+  "giu",
+);
+
+/** Rozbija wpis na pola oraz nagłówek (tekst przed pierwszą etykietą). */
+function polaEtykiet(tekst: string): { pola: Map<string, string>; naglowek: string } {
+  const plaski = tekst.replace(/\s+/g, " ").trim();
+  const trafienia: { nazwa: string; od: number; do: number }[] = [];
+  for (const m of plaski.matchAll(ETYKIETA_RE)) {
+    const surowa = m[1].toLowerCase();
+    const zDwukropkiem = !!m[2];
+    const wielka = /^[A-ZĄĆĘŁŃÓŚŹŻ]/.test(m[1]);
+    const nazwa = zDwukropkiem
+      ? (ETYKIETY_BEZ_DWUKROPKA[surowa] ?? ETYKIETY_Z_DWUKROPKIEM[surowa])
+      : wielka
+        ? ETYKIETY_BEZ_DWUKROPKA[surowa]
+        : undefined;
+    if (nazwa) trafienia.push({ nazwa, od: m.index!, do: m.index! + m[0].length });
   }
-  return wynik;
+  const pola = new Map<string, string>();
+  trafienia.forEach((t, i) => {
+    const wartosc = plaski.slice(t.do, trafienia[i + 1]?.od ?? plaski.length).trim();
+    pola.set(t.nazwa, [pola.get(t.nazwa), wartosc].filter(Boolean).join(" "));
+  });
+  return { pola, naglowek: plaski.slice(0, trafienia[0]?.od ?? 0).trim() };
 }
 
 function rozpoznajTyp(tekst: string): Typ {
@@ -184,44 +220,40 @@ function podzielNaWpisy(tekst: string): string[] {
 }
 
 function parsujWpis(blok: string, dzis: string, znane: string[]): Wpis {
-  const pola = polaEtykiet(blok);
+  const { pola, naglowek } = polaEtykiet(blok);
 
   const typTekst = [pola.get("rodzaj"), pola.get("kategoria"), pola.get("typ")]
     .filter(Boolean)
     .join(" ");
-  const typ = rozpoznajTyp(typTekst || blok.split("\n").slice(0, 3).join(" "));
+  const plaski = blok.replace(/\s+/g, " ").trim();
+  const typ = rozpoznajTyp(typTekst || naglowek || plaski.slice(0, 150));
 
-  // Termin: pole "Data"/"Termin", w przeciwnym razie pierwsza data poza "Data dodania".
-  const bezDodania = blok
-    .split("\n")
-    .filter((l) => !/^\s*(data\s+dodania|dodano|dodał)/i.test(l))
-    .join("\n");
+  // Termin: pole "Data"/"Data i czas"/"Termin", inaczej pierwsza data poza "Data dodania".
+  const bezDodania = plaski.replace(/(data dodania|dodano|dodał)\s*:?[^A-Za-ząćęłńóśźż]*/gi, " ");
   const termin =
     znajdzDate(pola.get("data") ?? pola.get("termin") ?? "", dzis) ?? znajdzDate(bezDodania, dzis);
 
-  // Przedmiot: pole, potem znany przedmiot z planu, potem reszta pierwszej linii.
+  // Przedmiot: pole, potem nagłówek, potem znany przedmiot z planu.
   let przedmiot = pola.get("przedmiot")?.trim() || null;
+  const naglowekCzysty = naglowek
+    .replace(/\b\d{1,2}:\d{2}\b/g, "")
+    .replace(/\d{1,4}[./-]\d{1,2}([./-]\d{2,4})?/g, "")
+    .replace(/(sprawdzian|kartk[oó]wka|praca\s+klasowa|zadanie\s+domowe)/gi, "")
+    .replace(/[-–—:,]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!przedmiot && naglowekCzysty && naglowekCzysty.length <= 40) przedmiot = naglowekCzysty;
   if (!przedmiot) {
-    const male = blok.toLowerCase();
+    const male = plaski.toLowerCase();
     przedmiot =
       [...znane]
         .sort((a, b) => b.length - a.length)
         .find((n) => n && male.includes(n.toLowerCase())) ?? null;
   }
-  if (!przedmiot) {
-    const pierwsza = blok.split("\n").find((l) => l.trim()) ?? "";
-    const m = pierwsza.match(/(?:sprawdzian|kartk[oó]wka|praca\s+klasowa)\s*[-–—:]?\s*(.+)/i);
-    const kandydat = m?.[1]
-      .replace(/\d{1,4}[./-]\d{1,2}([./-]\d{2,4})?/g, "")
-      .replace(/[-–—:,]+\s*$/, "")
-      .trim();
-    if (kandydat && kandydat.length <= 40) przedmiot = kandydat;
-  }
+  if (przedmiot) przedmiot = przedmiot.replace(/\s+/g, " ").trim();
 
-  const nrM =
-    (pola.get("nr lekcji") ?? pola.get("lekcja") ?? "").match(/\d+/) ??
-    blok.match(/nr\s*lekcji\s*:?\s*(\d+)/i);
-  const nr_lekcji = nrM ? Number(nrM[1] ?? nrM[0]) : null;
+  const nrM = (pola.get("nr lekcji") ?? "").match(/\d+/);
+  const nr_lekcji = nrM ? Number(nrM[0]) : null;
 
   const nauczyciel = pola.get("nauczyciel")?.trim() || null;
 

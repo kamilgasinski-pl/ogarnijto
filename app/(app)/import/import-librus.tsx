@@ -235,7 +235,7 @@ export function ImportLibrus({ rodzinaId, dzis, znanePrzedmioty }: Props) {
       {pozycje.length > 0 && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Podgląd ({pozycje.length})</h2>
-          <p className="text-sm text-gray-500">Sprawdź i popraw dane przed dodaniem. Podzadania wpisuj po jednym w wierszu.</p>
+          <p className="text-sm text-gray-500">Sprawdź i popraw dane przed dodaniem. Zadania cząstkowe wpisuj po jednym w wierszu.</p>
           {pozycje.map((p) => (
             <Card key={p.id} className={`space-y-3 ${p.zaznacz ? "" : "opacity-60"}`}>
               <label className="flex items-center gap-2 text-sm font-medium">
@@ -274,7 +274,7 @@ export function ImportLibrus({ rodzinaId, dzis, znanePrzedmioty }: Props) {
                   <Input value={p.opis} onChange={(e) => zmien(p.id, { opis: e.target.value })} />
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
-                  <Label>Podzadania (lista „umiem”)</Label>
+                  <Label>Zadania cząstkowe (lista „umiem”)</Label>
                   <Textarea rows={Math.min(10, Math.max(3, p.podzadania.split("\n").length))} value={p.podzadania} onChange={(e) => zmien(p.id, { podzadania: e.target.value })} />
                 </div>
               </div>
