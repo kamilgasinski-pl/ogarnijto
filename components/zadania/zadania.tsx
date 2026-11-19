@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AlarmClock, Check, ListChecks } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
-import { dzienMiesiac, etykietaDnia } from "@/lib/dates";
+import { dodajDni, dzienMiesiac, etykietaDnia } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
@@ -28,6 +28,8 @@ type Props = {
   jutro: string;
   widok: "pulpit" | "wszystkie";
   weekend?: number;
+  /** Tydzień pokazywany na pulpicie (poniedziałek–niedziela). */
+  tydzien?: { start: string; numer: number; koniec: string; biezacy: boolean };
 };
 
 function liczba(n: number) {
@@ -50,6 +52,7 @@ export function Zadania({
   jutro,
   widok,
   weekend = 0,
+  tydzien,
 }: Props) {
   const [supabase] = useState(() => createClient());
   const [zadania, setZadania] = useState(z0);
@@ -129,6 +132,63 @@ export function Zadania({
     );
   }
 
+  function widokTygodnia(t: NonNullable<Props["tydzien"]>) {
+    const nawig =
+      "rounded-full border border-gray-300 bg-white px-3 py-1 text-sm hover:bg-gray-100";
+    const dni: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = dodajDni(t.start, i);
+      // sobotę i niedzielę pokazujemy tylko, gdy coś w nie wypada
+      if (i < 5 || zadania.some((z) => z.termin === d)) dni.push(d);
+    }
+    return (
+      <section className="space-y-3 border-t border-gray-200 pt-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">
+            Tydzień {t.numer}{" "}
+            <span className="text-sm font-normal text-gray-500">
+              {dzienMiesiac(t.start)}–{dzienMiesiac(t.koniec)}
+            </span>
+          </h2>
+          <div className="flex items-center gap-2">
+            <Link href={`/?tydzien=${dodajDni(t.start, -7)}`} className={nawig} aria-label="Poprzedni tydzień">←</Link>
+            {!t.biezacy && <Link href="/" className={nawig}>Ten tydzień</Link>}
+            <Link href={`/?tydzien=${dodajDni(t.start, 7)}`} className={nawig} aria-label="Następny tydzień">→</Link>
+          </div>
+        </div>
+        {dni.map((d) => {
+          const lista = zadania.filter((z) => z.termin === d).sort(sortuj);
+          return (
+            <div key={d} className="space-y-1.5">
+              <h3 className={`text-sm font-semibold ${d === dzis ? "text-gray-900" : "text-gray-600"}`}>
+                {etykietaDnia(d, dzis)}
+                {d === dzis || d === jutro ? <span className="ml-1 font-normal text-gray-400">{dzienMiesiac(d)}</span> : null}
+              </h3>
+              {lista.length === 0 ? (
+                <p className="text-sm text-gray-300">—</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {lista.map((z) => (
+                    <Wiersz
+                      key={z.id}
+                      z={z}
+                      podzadania={podDla(z.id)}
+                      zalegle={false}
+                      dzis={dzis}
+                      onStatus={ustawStatus}
+                      onPrzenies={przenies}
+                      onOtworz={() => setEdycja(z.id)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </section>
+    );
+  }
+
   let tresc: React.ReactNode;
   if (widok === "pulpit") {
     const dzisL = zadania.filter((z) => z.termin === dzis && !jestZalegle(z, dzis)).sort(sortuj);
@@ -147,6 +207,7 @@ export function Zadania({
             </Link>
           ),
         )}
+        {tydzien && widokTygodnia(tydzien)}
       </>
     );
   } else {

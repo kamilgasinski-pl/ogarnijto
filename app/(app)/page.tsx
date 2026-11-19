@@ -18,18 +18,27 @@ import {
   type Zadanie,
 } from "@/lib/zadania";
 
-export default async function Pulpit() {
+export default async function Pulpit({
+  searchParams,
+}: {
+  searchParams: Promise<{ tydzien?: string }>;
+}) {
   const { supabase, osoba } = await wymagajRodziny();
+  const sp = await searchParams;
   const dzis = dzisiaj();
   const jutro = jutroDlaWidoku(dzis);
   const tydzien = tydzienISO(dzis);
+  const poprawna = sp.tydzien && /^\d{4}-\d{2}-\d{2}$/.test(sp.tydzien);
+  const wybrany = tydzienISO(poprawna ? sp.tydzien! : dzis);
   const dzienNr = dzienTygodnia(dzis);
 
   // Zadania: niewykonane do jutra (w tym zaległe) oraz wszystko z dziś i jutra.
   const { data: zad } = await supabase
     .from("zadania")
     .select(KOLUMNY_ZADAN)
-    .or(`and(status.eq.do_zrobienia,termin.lte.${jutro}),termin.in.(${dzis},${jutro})`)
+    .or(
+      `and(status.eq.do_zrobienia,termin.lte.${jutro}),termin.in.(${dzis},${jutro}),and(termin.gte.${wybrany.start},termin.lte.${wybrany.koniec})`,
+    )
     .order("termin");
   const zadania = (zad ?? []) as Zadanie[];
 
@@ -90,6 +99,7 @@ export default async function Pulpit() {
       <div className="grid gap-6 md:grid-cols-3">
         <div className="md:col-span-2">
           <Zadania
+            key={wybrany.start}
             zadania={zadania}
             podzadania={podzadania}
             rodzinaId={osoba.rodzina_id}
@@ -98,6 +108,7 @@ export default async function Pulpit() {
             jutro={jutro}
             widok="pulpit"
             weekend={weekend}
+            tydzien={{ ...wybrany, biezacy: wybrany.start === tydzien.start }}
           />
         </div>
         <Card className="h-fit space-y-3">
