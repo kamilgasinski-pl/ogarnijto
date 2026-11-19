@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Bus, Car } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, dzienTygodnia } from "@/lib/dates";
@@ -14,6 +15,7 @@ import {
   naCzas,
   zWiersza,
   type Blok,
+  type DojazdNaPlanie,
   type Przedmiot,
   type WierszBloku,
 } from "@/lib/plan";
@@ -30,6 +32,7 @@ type Props = {
   dzis: string;
   przedmioty: Przedmiot[];
   bloki: WierszBloku[];
+  dojazdy?: DojazdNaPlanie[];
 };
 
 type Podglad = { id: string; dzien: number; start: number; koniec: number };
@@ -53,7 +56,7 @@ function blokujPrzewijanie(e: TouchEvent) {
 
 const przyciagnij = (min: number) => Math.round(min / KROK) * KROK;
 
-export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: b0 }: Props) {
+export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: b0, dojazdy = [] }: Props) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
   const [przedmioty, setPrzedmioty] = useState(p0);
@@ -73,8 +76,8 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
   const kolumnyDb = jestTydzien ? KOLUMNY_TYGODNIA : KOLUMNY_SZABLONU;
 
   // Zakres godzin siatki: co najmniej 7:00–16:00, szerszy, gdy są lekcje poza nim.
-  const minStart = Math.min(7 * 60, ...bloki.map((b) => b.start));
-  const maxKoniec = Math.max(16 * 60, ...bloki.map((b) => b.koniec));
+  const minStart = Math.min(7 * 60, ...bloki.map((b) => b.start), ...dojazdy.map((d) => d.start));
+  const maxKoniec = Math.max(16 * 60, ...bloki.map((b) => b.koniec), ...dojazdy.map((d) => d.koniec));
   const godzOd = Math.floor(minStart / 60) * 60;
   const godzDo = Math.min(24 * 60, Math.ceil(maxKoniec / 60) * 60);
   const wysokosc = (godzDo - godzOd) * PPM;
@@ -82,8 +85,8 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
   for (let m = godzOd; m <= godzDo; m += 60) godziny.push(m);
 
   const dni = [1, 2, 3, 4, 5];
-  if (bloki.some((b) => b.dzien === 6)) dni.push(6);
-  if (bloki.some((b) => b.dzien === 7)) dni.push(7);
+  if (bloki.some((b) => b.dzien === 6) || dojazdy.some((d) => d.dzien === 6)) dni.push(6);
+  if (bloki.some((b) => b.dzien === 7) || dojazdy.some((d) => d.dzien === 7)) dni.push(7);
 
   const przedmiotPo = (id: string | null) => przedmioty.find((p) => p.id === id);
 
@@ -376,6 +379,24 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                     style={{ top: (m - godzOd) * PPM }}
                   />
                 ))}
+                {dojazdy
+                  .filter((d) => d.dzien === n)
+                  .map((d) => (
+                    <div
+                      key={d.id}
+                      className={`pointer-events-none absolute inset-x-0.5 z-[5] overflow-hidden rounded-md border border-dashed border-sky-400 bg-sky-50 px-1.5 py-0.5 text-[11px] text-sky-900 ${d.odwolany ? "opacity-50" : ""}`}
+                      style={{ top: (d.start - godzOd) * PPM, height: Math.max((d.koniec - d.start) * PPM - 1, 20) }}
+                    >
+                      <p className={`flex items-center gap-1 truncate font-medium ${d.odwolany ? "line-through" : ""}`}>
+                        {d.rodzaj === "autobus" ? <Bus size={11} /> : <Car size={11} />}
+                        {d.tytul}
+                      </p>
+                      <p className="truncate text-sky-700">
+                        {naCzas(d.start)}
+                        {d.odwolany && " · odwołany"}
+                      </p>
+                    </div>
+                  ))}
                 {bloki
                   .map(widoczny)
                   .filter((b) => b.dzien === n)

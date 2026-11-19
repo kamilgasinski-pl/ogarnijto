@@ -1,16 +1,19 @@
 import Link from "next/link";
 import { wymagajRodziny } from "@/lib/auth";
 import { Card, CardTitle } from "@/components/ui/card";
+import { KartaDojazdow } from "@/components/dojazdy/lista";
 import { Zadania } from "@/components/zadania/zadania";
 import {
   dataSlownie,
   dzienTygodnia,
   dzisiaj,
+  etykietaDnia,
   jutroDlaWidoku,
   poniedzialek,
   tydzienISO,
 } from "@/lib/dates";
 import { naCzas, naMinuty } from "@/lib/plan";
+import { KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, wystapienia, type Dojazd, type Wyjatek } from "@/lib/dojazdy";
 import {
   KOLUMNY_PODZADAN,
   KOLUMNY_ZADAN,
@@ -96,6 +99,15 @@ export default async function Pulpit({
     }));
   }
 
+  // Dojazdy na dziś i jutro: moje oraz bez przypisanej osoby.
+  const [{ data: dojDb }, { data: wyjDb }] = await Promise.all([
+    supabase.from("dojazdy").select(KOLUMNY_DOJAZDOW),
+    supabase.from("dojazdy_wyjatki").select(KOLUMNY_WYJATKOW).gte("data", dzis).lte("data", jutro),
+  ]);
+  const dojazdyMoje = wystapienia((dojDb ?? []) as Dojazd[], (wyjDb ?? []) as Wyjatek[], dzis, jutro).filter(
+    (w) => (w.data === dzis || w.data === jutro) && (!w.dojazd.przypisano_id || w.dojazd.przypisano_id === osoba.id),
+  );
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
@@ -105,7 +117,8 @@ export default async function Pulpit({
         </p>
       </div>
       <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-2">
+        <div className="space-y-6 md:col-span-2">
+          <KartaDojazdow pozycje={dojazdyMoje} nazwaDnia={(d) => etykietaDnia(d, dzis)} />
           <Zadania
             key={wybrany.start}
             zadania={zadania}

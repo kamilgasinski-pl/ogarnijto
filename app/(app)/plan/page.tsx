@@ -13,6 +13,7 @@ import {
   type Przedmiot,
   type WierszBloku,
 } from "@/lib/plan";
+import { KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, koniecNaPlanie, wystapienia, type Dojazd, type Wyjatek } from "@/lib/dojazdy";
 import { Planer } from "./planer";
 
 type Props = {
@@ -46,6 +47,16 @@ export default async function PlanPage({ searchParams }: Props) {
       .select(KOLUMNY_TYGODNIA)
       .eq("tydzien_start", tydzien);
     bloki = (data ?? []) as WierszBloku[];
+  }
+
+  // Dojazdy (tylko do odczytu) w widoku tygodnia.
+  let dojazdy: ReturnType<typeof wystapienia> = [];
+  if (!szablon) {
+    const [{ data: d }, { data: w }] = await Promise.all([
+      supabase.from("dojazdy").select(KOLUMNY_DOJAZDOW),
+      supabase.from("dojazdy_wyjatki").select(KOLUMNY_WYJATKOW).gte("data", tydzien).lte("data", dodajDni(tydzien, 6)),
+    ]);
+    dojazdy = wystapienia((d ?? []) as Dojazd[], (w ?? []) as Wyjatek[], tydzien, dodajDni(tydzien, 6));
   }
 
   const poprzedni = dodajDni(tydzien, -7);
@@ -103,6 +114,15 @@ export default async function PlanPage({ searchParams }: Props) {
         dzis={dzis}
         przedmioty={(przedmioty ?? []) as Przedmiot[]}
         bloki={bloki}
+        dojazdy={dojazdy.map((x) => ({
+          id: `${x.dojazd.id}${x.data}`,
+          rodzaj: x.dojazd.rodzaj,
+          tytul: x.dojazd.tytul,
+          dzien: x.dzien,
+          start: x.start,
+          koniec: koniecNaPlanie(x),
+          odwolany: x.odwolany,
+        }))}
       />
     </div>
   );

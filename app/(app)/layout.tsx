@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { CalendarDays, ClipboardPaste, Home, ListChecks, LogOut, Repeat, Users } from "lucide-react";
+import { Bus, CalendarDays, ClipboardPaste, Home, ListChecks, LogOut, Repeat, Users } from "lucide-react";
 import { wymagajRodziny } from "@/lib/auth";
 
 const linki = [
   { href: "/", etykieta: "Pulpit", ikona: Home },
   { href: "/zadania", etykieta: "Zadania", ikona: ListChecks },
   { href: "/powtarzalne", etykieta: "Powtarzalne", ikona: Repeat },
+  { href: "/dojazdy", etykieta: "Dojazdy", ikona: Bus },
   { href: "/plan", etykieta: "Plan zajęć", ikona: CalendarDays },
   { href: "/import", etykieta: "Import", ikona: ClipboardPaste },
   { href: "/rodzina", etykieta: "Rodzina", ikona: Users },

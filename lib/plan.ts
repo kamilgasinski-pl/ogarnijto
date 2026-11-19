@@ -96,3 +96,14 @@ export function zWiersza(w: WierszBloku): Blok {
     uwagi: w.uwagi ?? "",
   };
 }
+
+/** Dojazd pokazywany na planerze (tylko do odczytu). */
+export type DojazdNaPlanie = {
+  id: string;
+  rodzaj: "autobus" | "odwoz";
+  tytul: string;
+  dzien: number;
+  start: number;
+  koniec: number;
+  odwolany: boolean;
+};

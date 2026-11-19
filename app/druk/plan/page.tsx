@@ -9,6 +9,7 @@ import {
   type Przedmiot,
   type WierszBloku,
 } from "@/lib/plan";
+import { KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, wystapienia, koniecNaPlanie, type Dojazd, type Wyjatek } from "@/lib/dojazdy";
 import { PrzyciskDruku } from "./przycisk-druku";
 
 type Props = {
@@ -40,8 +41,17 @@ export default async function DrukPlanu({ searchParams }: Props) {
   }
   const bloki = wiersze.map(zWiersza);
 
-  const od = Math.floor(Math.min(7 * 60, ...bloki.map((b) => b.start)) / 60) * 60;
-  const do_ = Math.ceil(Math.max(15 * 60, ...bloki.map((b) => b.koniec)) / 60) * 60;
+  let dojazdy: ReturnType<typeof wystapienia> = [];
+  if (!szablon) {
+    const [{ data: d }, { data: w }] = await Promise.all([
+      supabase.from("dojazdy").select(KOLUMNY_DOJAZDOW),
+      supabase.from("dojazdy_wyjatki").select(KOLUMNY_WYJATKOW).gte("data", tydzien).lte("data", dodajDni(tydzien, 6)),
+    ]);
+    dojazdy = wystapienia((d ?? []) as Dojazd[], (w ?? []) as Wyjatek[], tydzien, dodajDni(tydzien, 6));
+  }
+
+  const od = Math.floor(Math.min(7 * 60, ...bloki.map((b) => b.start), ...dojazdy.map((d) => d.start)) / 60) * 60;
+  const do_ = Math.ceil(Math.max(15 * 60, ...bloki.map((b) => b.koniec), ...dojazdy.map(koniecNaPlanie)) / 60) * 60;
   // Dobieramy skalę tak, by siatka zmieściła się na jednej stronie A4 (poziomo).
   const ppm = Math.min(1.3, 600 / (do_ - od));
   const wysokosc = (do_ - od) * ppm;
@@ -49,8 +59,8 @@ export default async function DrukPlanu({ searchParams }: Props) {
   for (let m = od; m <= do_; m += 60) godziny.push(m);
 
   const dni = [1, 2, 3, 4, 5];
-  if (bloki.some((b) => b.dzien === 6)) dni.push(6);
-  if (bloki.some((b) => b.dzien === 7)) dni.push(7);
+  if (bloki.some((b) => b.dzien === 6) || dojazdy.some((d) => d.dzien === 6)) dni.push(6);
+  if (bloki.some((b) => b.dzien === 7) || dojazdy.some((d) => d.dzien === 7)) dni.push(7);
 
   const tytul = szablon
     ? "Plan zajęć (szablon)"
@@ -88,6 +98,24 @@ export default async function DrukPlanu({ searchParams }: Props) {
               {godziny.map((m) => (
                 <div key={m} className="absolute inset-x-0 border-t border-gray-200" style={{ top: (m - od) * ppm }} />
               ))}
+              {dojazdy
+                .filter((d) => d.dzien === n)
+                .map((d) => (
+                  <div
+                    key={d.dojazd.id + d.data}
+                    className="absolute inset-x-0.5 overflow-hidden rounded-sm border border-dashed border-sky-500 bg-sky-50 px-1 py-0.5 text-[10px] leading-tight text-sky-900"
+                    style={{
+                      top: (d.start - od) * ppm,
+                      height: Math.max((koniecNaPlanie(d) - d.start) * ppm - 1, 16),
+                      opacity: d.odwolany ? 0.55 : 1,
+                    }}
+                  >
+                    <p className={`truncate font-semibold ${d.odwolany ? "line-through" : ""}`}>
+                      {d.dojazd.rodzaj === "autobus" ? "🚌" : "🚗"} {d.dojazd.tytul}
+                    </p>
+                    <p className="truncate">{naCzas(d.start)}{d.odwolany && " · odwołany"}</p>
+                  </div>
+                ))}
               {bloki
                 .filter((b) => b.dzien === n)
                 .map((b) => {
