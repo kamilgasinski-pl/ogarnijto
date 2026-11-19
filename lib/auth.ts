@@ -23,11 +23,14 @@ export const pobierzOsobe = cache(async () => {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: osoba } = await supabase
+  const { data: osoba, error } = await supabase
     .from("osoby")
     .select("id, rodzina_id, rola, imie")
     .eq("id", user.id)
     .maybeSingle<Osoba>();
+
+  // Błąd odczytu (np. brak uprawnień w bazie) nie może wyglądać jak brak rodziny.
+  if (error) throw new Error(`Nie można odczytać profilu: ${error.message}`);
 
   return { supabase, user, osoba };
 });
