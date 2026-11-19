@@ -120,16 +120,16 @@ export function Zadania({
   // Domyślny widok: dziecko widzi swoje zadania, rodzic wszystkie. Wybór
   // użytkownika jest zapamiętany w tej przeglądarce.
   const [dojazdEdycja, setDojazdEdycja] = useState<DojazdWiersz | null>(null);
-  const [filtr, setFiltr] = useState<"wszystkie" | "moje">(rola === "uczen" ? "moje" : "wszystkie");
+  const [filtr, setFiltr] = useState<string>(rola === "uczen" ? "moje" : "wszystkie");
   const kluczFiltra = `ogarnijto.filtr.${mojeId}`;
   useEffect(() => {
     try {
       const f = localStorage.getItem(kluczFiltra);
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (f === "moje" || f === "wszystkie") setFiltr(f);
+      if (f && (f === "moje" || f === "wszystkie" || osoby.some((o) => o.id === f))) setFiltr(f);
     } catch {}
-  }, [kluczFiltra]);
-  function ustawFiltr(f: "wszystkie" | "moje") {
+  }, [kluczFiltra, osoby]);
+  function ustawFiltr(f: string) {
     setFiltr(f);
     try {
       localStorage.setItem(kluczFiltra, f);
@@ -172,14 +172,16 @@ export function Zadania({
   }
 
   // Filtr "Moje" ogranicza wszystkie sekcje poniżej.
+  // Filtr: "moje", konkretna osoba (id) albo "wszystkie".
+  const osobaFiltru = filtr === "wszystkie" ? null : osoby.find((o) => o.id === (filtr === "moje" ? mojeId : filtr)) ?? null;
   const mojeFiltr = (z: Pick<Zadanie, "przypisano_id" | "wykonawca">) =>
-    filtr === "wszystkie" || jestMoje(z, mojeId, rola);
+    !osobaFiltru || jestMoje(z, osobaFiltru.id, osobaFiltru.rola);
   const lista0 = zadania.filter(mojeFiltr);
   const widoczne = lista0.filter((z) => pokazWykonane || widok === "pulpit" || z.status === "do_zrobienia");
   const zalegle = lista0.filter((z) => jestZalegle(z, dzis)).sort(sortuj);
   // Dojazdy podlegają temu samemu filtrowi: "Moje" to te przypisane do mnie.
   const dojazdyDnia = (d: string) =>
-    dojazdy.filter((x) => x.data === d && (filtr === "wszystkie" || x.przypisano_id === mojeId));
+    dojazdy.filter((x) => x.data === d && (!osobaFiltru || x.przypisano_id === osobaFiltru.id));
   const weekendLiczba = weekend.filter(mojeFiltr).length;
   const ukryte = zadania.length - lista0.length;
 
@@ -365,17 +367,21 @@ export function Zadania({
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-gray-500">Pokaż:</span>
         <div className="flex rounded-full bg-gray-200 p-0.5">
-          {(["moje", "wszystkie"] as const).map((f) => (
+          {[
+            { wartosc: "moje", etykieta: "Moje" },
+            ...osoby.filter((o) => o.id !== mojeId).map((o) => ({ wartosc: o.id, etykieta: o.imie })),
+            { wartosc: "wszystkie", etykieta: "Wszystkie" },
+          ].map((f) => (
             <button
-              key={f}
-              onClick={() => ustawFiltr(f)}
-              className={`rounded-full px-4 py-1 ${filtr === f ? "bg-gray-900 text-white" : "text-gray-700"}`}
+              key={f.wartosc}
+              onClick={() => ustawFiltr(f.wartosc)}
+              className={`rounded-full px-4 py-1 ${filtr === f.wartosc ? "bg-gray-900 text-white" : "text-gray-700"}`}
             >
-              {f === "wszystkie" ? "Wszystkie" : "Moje"}
+              {f.etykieta}
             </button>
           ))}
         </div>
-        {filtr === "moje" && ukryte > 0 && (
+        {filtr !== "wszystkie" && ukryte > 0 && (
           <span className="text-gray-400">
             ({ukryte} {ukryte === 1 ? "zadanie innej osoby ukryte" : "zadań innych osób ukrytych"})
           </span>
