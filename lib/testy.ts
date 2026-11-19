@@ -50,7 +50,10 @@ function tasuj<T>(t: T[], los: () => number): T[] {
 // --- czyszczenie tekstu z OCR ---
 const SKROTY = /\b(np|itd|itp|tzw|tj|ok|zob|por|ryc|tab|r|w|ul|prof|dr|św|wg|godz|min|mln|mld|tys|ws|im|nr|str|s|pn|pd|wsch|zach)\./giu;
 
-type Czesc = { zdania: string[]; naglowki: { tekst: string; od: number }[] };
+type Czesc = { zdania: string[]; naglowki: { tekst: string; od: number }[]; odrzucone: number; wszystkie: number };
+
+const naglowekCzytelny = (t: string) =>
+  (t.match(/\p{L}/gu) ?? []).length / t.length > 0.85 && !NIEDOZWOLONE.test(t) && /\p{L}{5}/u.test(t) && !/\s\p{L}\s/u.test(` ${t} `);
 
 export function oczyscTekst(surowy: string): Czesc {
   const tekst = surowy
@@ -88,15 +91,18 @@ export function oczyscTekst(surowy: string): Czesc {
     biezacy += (biezacy ? " " : "") + l;
   }
   zamknij();
-  const zdania = akapity.flatMap(rozbijNaZdania).filter(zdanieSensowne);
-  // Po filtrowaniu indeksy nagłówków mogą się przesunąć: liczymy je ponownie na przefiltrowanej liście.
   const wszystkie = akapity.flatMap(rozbijNaZdania);
-  const mapa = naglowki.map((n) => {
-    const przed = wszystkie.slice(0, n.od).filter(zdanieSensowne).length;
-    return { tekst: n.tekst, od: przed };
-  });
+  // Słowa, które w tekście występują małą literą (do wykrywania zlepionych zdań).
+  const male = new Set<string>();
+  for (const z of wszystkie) for (const w of z.match(/(?<![\p{L}])\p{Ll}{4,}/gu) ?? []) male.add(w);
+  const dobre = (z: string) => zdanieSensowne(z, male);
+  const zdania = wszystkie.filter(dobre);
+  // Po filtrowaniu indeksy nagłówków mogą się przesunąć: liczymy je ponownie na przefiltrowanej liście.
+  const mapa = naglowki
+    .filter((n) => naglowekCzytelny(n.tekst))
+    .map((n) => ({ tekst: n.tekst, od: wszystkie.slice(0, n.od).filter(dobre).length }));
   akapity = [];
-  return { zdania, naglowki: mapa };
+  return { zdania, naglowki: mapa, odrzucone: wszystkie.length - zdania.length, wszystkie: wszystkie.length };
 }
 
 function rozbijNaZdania(akapit: string): string[] {
@@ -107,14 +113,54 @@ function rozbijNaZdania(akapit: string): string[] {
     .filter(Boolean);
 }
 
-function zdanieSensowne(z: string): boolean {
-  if (z.length < 35 || z.length > 280) return false;
+const KROTKIE = new Set(
+  "w z o u i a na do po za od we ze ku ni to by co ma mu ją są ci go je ja my on ty ta te tu że bo aż jak lub czy nie oraz".split(" "),
+);
+const NIEDOZWOLONE = /[|*@©»«~^_=<>{}[\]\\#$&¢€£¥§™®]/u;
+const ZAKAZANE_SLOWA =
+  /\b(wydawnictwo|warszawa|według|fot|rys|tabela|tab|doświadczenie|instrukcja|obserwacje|wniosek|rozwiąż|zeszycie|zapamiętaj|dociekliwych|ćwiczenie|isbn|copyright)\b/iu;
+const SAMOGLOSKI = /[aeiouyąęó]/iu;
+
+/** Ile podejrzanych (zepsutych przez OCR) elementów ma zdanie. Dobre zdanie ma 0. */
+function szum(z: string, male: Set<string>): number {
+  let wynik = 0;
+  if (NIEDOZWOLONE.test(z)) wynik += 2;
+  if (ZAKAZANE_SLOWA.test(z)) wynik += 2;
+  if (!/^[\p{Lu}\d„"–—-]/u.test(z)) wynik += 2; // zaczyna się od środka zdania
+  if (!/[.!?…]["”)]?$/u.test(z)) wynik += 1; // urwane
+  const otw = (z.match(/\(/g) ?? []).length;
+  const zam = (z.match(/\)/g) ?? []).length;
+  if (otw !== zam) wynik += 1;
+  if ((z.match(/„/g) ?? []).length !== (z.match(/”/g) ?? []).length) wynik += 1;
+  const tokeny = z.split(/\s+/);
+  tokeny.forEach((t, i) => {
+    const w = t.replace(/^[^\p{L}\d]+|[^\p{L}\d]+$/gu, "");
+    if (!w) {
+      if (/^[^\p{L}\d]+$/u.test(t) && !/^[–—-]$/.test(t)) wynik += 1; // samotny znak
+      return;
+    }
+    if (/^\d/.test(w)) return;
+    if (w.length === 1 && !KROTKIE.has(w.toLowerCase())) wynik += 1;
+    else if (w.length === 2 && !KROTKIE.has(w.toLowerCase())) wynik += 1;
+    if (w.length >= 3 && !SAMOGLOSKI.test(w)) wynik += 1;
+    if (/\p{L}\d|\d\p{L}/u.test(w) && !/^\d+[°%]?\p{Lu}?$/u.test(w)) wynik += 1;
+    // Wielka litera w środku wyrazu (SzEDE); skróty z samych wielkich liter ≤4 znaki są w porządku.
+    if (/\p{Ll}\p{Lu}/u.test(w)) wynik += 1;
+    else if (w.length > 4 && w === w.toUpperCase() && /\p{L}/u.test(w)) wynik += 1;
+    // Rzeczownik z wielkiej litery w środku zdania, który gdzie indziej występuje małą literą:
+    // to zwykle dwa zdania zlepione przez brak kropki.
+    if (i > 0 && /^\p{Lu}\p{Ll}{3,}$/u.test(w) && male.has(w.toLowerCase()) && !/[.!?:]$/.test(tokeny[i - 1])) wynik += 1;
+  });
+  return wynik;
+}
+
+function zdanieSensowne(z: string, male: Set<string> = new Set()): boolean {
+  if (z.length < 40 || z.length > 260) return false;
   const slowa = z.split(/\s+/);
-  if (slowa.length < 6) return false;
+  if (slowa.length < 7 || slowa.length > 40) return false;
   const litery = (z.match(/\p{L}/gu) ?? []).length;
-  if (litery / z.length < 0.72) return false; // szum z OCR
-  const dlugie = slowa.filter((w) => w.replace(/\P{L}/gu, "").length >= 3).length;
-  return dlugie / slowa.length > 0.6;
+  if (litery / z.length < 0.78) return false;
+  return szum(z, male) === 0;
 }
 
 // --- wyszukiwanie terminów ---
@@ -142,7 +188,9 @@ function terminyZdania(z: string, czestosc: Map<string, number>): Termin[] {
       wynik.push({ tekst: s, rodzaj: "nazwa", wynik: 8, rdzen: rdzen(s) });
     } else if (goly.length >= 6) {
       const f = czestosc.get(rdzen(s)) ?? 1;
-      wynik.push({ tekst: s, rodzaj: "pojecie", wynik: Math.min(f, 5) * 1.5 + goly.length / 6, rdzen: rdzen(s) });
+      // Słowa kluczowe całego rozdziału (bardzo częste) są zbyt oczywiste, a pojedyncze bywają przypadkowe.
+      const baza = f >= 2 && f <= 4 ? 4 : f === 1 ? 2.5 : 0.5;
+      wynik.push({ tekst: s, rodzaj: "pojecie", wynik: baza + goly.length / 6 - (poczatek ? 1 : 0), rdzen: rdzen(s) });
     }
   }
   return wynik;
@@ -242,12 +290,31 @@ function znajdzDefinicje(zdania: string[]): Definicja[] {
 const skroc = (s: string, n = 110) => (s.length <= n ? s : s.slice(0, s.lastIndexOf(" ", n)) + "…");
 
 // --- główna funkcja ---
-export function generujTest(surowy: string, p: Parametry = DOMYSLNE, ziarno = Date.now()): WynikGeneracji {
+export function generujTest(surowy: string, zadane: Parametry = DOMYSLNE, ziarno = Date.now()): WynikGeneracji {
   const los = prng(ziarno);
-  const { zdania, naglowki } = oczyscTekst(surowy);
+  let p = zadane;
+  const { zdania, naglowki, odrzucone, wszystkie } = oczyscTekst(surowy);
   const uwagi: string[] = [];
-  if (zdania.length < 5) {
-    return { pytania: [], odpowiedzi: [], uwagi: ["Za mało czytelnego tekstu. Dodaj więcej zdjęć lub popraw tekst ręcznie."] };
+  if (zdania.length < 4) {
+    return {
+      pytania: [],
+      odpowiedzi: [],
+      uwagi: [
+        `Tylko ${zdania.length} z ${wszystkie} zdań nadaje się do testu: reszta jest zepsuta przez odczyt zdjęcia. Popraw tekst ręcznie albo odczytaj węższe fragmenty (jedna kolumna, bez zdjęć i tabel).`,
+      ],
+    };
+  }
+  if (odrzucone > zdania.length) {
+    uwagi.push(`Pominięto ${odrzucone} z ${wszystkie} zdań jako nieczytelne. Test jest ułożony tylko z poprawnych zdań.`);
+  }
+
+  // Mało materiału: zmniejszamy liczby pytań proporcjonalnie, zamiast zużywać wszystko na pierwszy typ.
+  const doZdan = p.wybor + p.luki + p.pf;
+  if (doZdan > zdania.length) {
+    const f = zdania.length / doZdan;
+    const skala = (n: number) => (n > 0 ? Math.max(1, Math.floor(n * f)) : 0);
+    p = { ...p, wybor: skala(p.wybor), luki: skala(p.luki), pf: skala(p.pf) };
+    uwagi.push(`Z tego tekstu da się ułożyć około ${zdania.length} pytań opartych na zdaniach, więc zmniejszono ich liczbę.`);
   }
 
   const czest = slownik(zdania);
@@ -257,8 +324,10 @@ export function generujTest(surowy: string, p: Parametry = DOMYSLNE, ziarno = Da
   const definicje = znajdzDefinicje(zdania);
   const indeksDef = new Map(definicje.map((d) => [d.zdanie, d]));
 
+  // Każde pojęcie służy za lukę najwyżej raz, żeby pytania nie powtarzały się o to samo.
+  const zuzyte = new Set<string>();
   const najlepszy = (i: number): Termin | null =>
-    [...terminy[i]].sort((a, b) => b.wynik - a.wynik)[0] ?? null;
+    [...terminy[i]].filter((t) => !zuzyte.has(t.rdzen)).sort((a, b) => b.wynik - a.wynik)[0] ?? null;
   const kolejnosc = tasuj(zdania.map((_, i) => i), los).sort(
     (a, b) => (najlepszy(b)?.wynik ?? 0) - (najlepszy(a)?.wynik ?? 0) + (los() - 0.5) * 6,
   );
@@ -301,6 +370,7 @@ export function generujTest(surowy: string, p: Parametry = DOMYSLNE, ziarno = Da
     const z = zlozOpcje(cel.tekst, dobierzDystraktory(cel, pula, los), los);
     if (!z) continue;
     uzyte.add(i);
+    zuzyte.add(cel.rdzen);
     const q = id();
     pytania.push({ id: q, typ: "wybor", tresc: `Wybierz odpowiedź, która poprawnie uzupełnia zdanie: ${luka}`, opcje: z.opcje });
     odpowiedzi.push({ id: q, tekst: z.opcje[z.poprawna], poprawna: z.poprawna });
@@ -318,6 +388,7 @@ export function generujTest(surowy: string, p: Parametry = DOMYSLNE, ziarno = Da
     const luka = zamienNaLuke(zdania[i], cel.tekst);
     if (!luka) continue;
     uzyte.add(i);
+    zuzyte.add(cel.rdzen);
     const q = id();
     pytania.push({ id: q, typ: "luka", tresc: luka });
     odpowiedzi.push({ id: q, tekst: cel.tekst });
@@ -353,6 +424,7 @@ export function generujTest(surowy: string, p: Parametry = DOMYSLNE, ziarno = Da
       tekstOdp = `Fałsz. W tekście: „${cel.tekst}” (zamiast „${podmiana}”). Zdanie: ${zdania[i]}`;
     }
     uzyte.add(i);
+    zuzyte.add(cel.rdzen);
     const q = id();
     pytania.push({ id: q, typ: "pf", tresc });
     odpowiedzi.push({ id: q, tekst: tekstOdp, prawda });
