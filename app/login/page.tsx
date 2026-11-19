@@ -15,6 +15,19 @@ export default function LoginPage() {
   const [info, setInfo] = useState<string | null>(null);
   const [trwa, setTrwa] = useState(false);
 
+  async function resetHasla() {
+    setBlad(null);
+    setInfo(null);
+    if (!email.trim()) return setBlad("Wpisz najpierw adres e-mail.");
+    setTrwa(true);
+    const { error } = await createClient().auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${location.origin}/auth/callback?next=/ustaw-haslo`,
+    });
+    setTrwa(false);
+    if (error) return setBlad(tlumaczBlad(error.message));
+    setInfo("Jeśli to konto istnieje, wysłaliśmy link do ustawienia nowego hasła. Otwórz go w tej samej przeglądarce.");
+  }
+
   async function wyslij(e: React.FormEvent) {
     e.preventDefault();
     setBlad(null);
@@ -72,9 +85,16 @@ export default function LoginPage() {
             {trwa ? "Chwileczkę…" : rejestracja ? "Załóż konto" : "Zaloguj"}
           </Button>
         </form>
-        <button type="button" className="text-sm text-gray-500 underline" onClick={() => { setRejestracja(!rejestracja); setBlad(null); setInfo(null); }}>
-          {rejestracja ? "Mam już konto" : "Nie mam konta"}
-        </button>
+        <div className="flex flex-wrap gap-x-4 gap-y-1">
+          <button type="button" className="text-sm text-gray-500 underline" onClick={() => { setRejestracja(!rejestracja); setBlad(null); setInfo(null); }}>
+            {rejestracja ? "Mam już konto" : "Nie mam konta"}
+          </button>
+          {!rejestracja && (
+            <button type="button" className="text-sm text-gray-500 underline" onClick={resetHasla} disabled={trwa}>
+              Nie pamiętam hasła
+            </button>
+          )}
+        </div>
       </Card>
     </main>
   );

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { wymagajRodziny } from "@/lib/auth";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Zaproszenia } from "./zaproszenia";
@@ -32,6 +33,9 @@ export default async function RodzinaPage() {
           ))}
         </ul>
       </Card>
+      <p className="text-sm text-gray-500">
+        <Link href="/ustaw-haslo" className="underline">Zmień hasło</Link>
+      </p>
       {osoba.rola === "rodzic" && <Zaproszenia poczatkowe={zaproszenia ?? []} />}
     </div>
   );
