@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArkuszWyjatku } from "@/components/dojazdy/arkusz-wyjatku";
-import { AlarmClock, Bus, Car, Check, ListChecks, Pencil, Repeat } from "lucide-react";
+import { AlarmClock, Bus, Car, Check, ChevronDown, ChevronRight, ListChecks, Pencil, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, etykietaDnia } from "@/lib/dates";
@@ -129,6 +129,22 @@ export function Zadania({
       if (f && (f === "moje" || f === "wszystkie" || osoby.some((o) => o.id === f))) setFiltr(f);
     } catch {}
   }, [kluczFiltra, osoby]);
+  // Widok tygodnia na pulpicie: domyślnie zwinięty, wybór pamiętany w przeglądarce.
+  const [tydzienOtwarty, setTydzienOtwarty] = useState(false);
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (localStorage.getItem("ogarnijto.tydzien.otwarty") === "1") setTydzienOtwarty(true);
+    } catch {}
+  }, []);
+  function przelaczTydzien() {
+    const nowy = !tydzienOtwarty;
+    setTydzienOtwarty(nowy);
+    try {
+      localStorage.setItem("ogarnijto.tydzien.otwarty", nowy ? "1" : "0");
+    } catch {}
+  }
+
   function ustawFiltr(f: string) {
     setFiltr(f);
     try {
@@ -230,19 +246,29 @@ export function Zadania({
     return (
       <section className="space-y-3 border-t border-gray-200 pt-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">
-            Tydzień {t.numer}{" "}
-            <span className="text-sm font-normal text-gray-500">
-              {dzienMiesiac(t.start)}–{dzienMiesiac(t.koniec)}
-            </span>
-          </h2>
-          <div className="flex items-center gap-2">
-            <Link href={`/?tydzien=${dodajDni(t.start, -7)}`} className={nawig} aria-label="Poprzedni tydzień">←</Link>
-            {!t.biezacy && <Link href="/" className={nawig}>Ten tydzień</Link>}
-            <Link href={`/?tydzien=${dodajDni(t.start, 7)}`} className={nawig} aria-label="Następny tydzień">→</Link>
-          </div>
+          <button
+            type="button"
+            onClick={przelaczTydzien}
+            aria-expanded={tydzienOtwarty}
+            className="flex items-center gap-1.5 text-left"
+          >
+            {tydzienOtwarty ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+            <h2 className="text-lg font-semibold">
+              Tydzień {t.numer}{" "}
+              <span className="text-sm font-normal text-gray-500">
+                {dzienMiesiac(t.start)}–{dzienMiesiac(t.koniec)}
+              </span>
+            </h2>
+          </button>
+          {tydzienOtwarty && (
+            <div className="flex items-center gap-2">
+              <Link href={`/?tydzien=${dodajDni(t.start, -7)}`} className={nawig} aria-label="Poprzedni tydzień">←</Link>
+              {!t.biezacy && <Link href="/" className={nawig}>Ten tydzień</Link>}
+              <Link href={`/?tydzien=${dodajDni(t.start, 7)}`} className={nawig} aria-label="Następny tydzień">→</Link>
+            </div>
+          )}
         </div>
-        {dni.map((d) => {
+        {tydzienOtwarty && dni.map((d) => {
           const lista = lista0.filter((z) => z.termin === d).sort(sortuj);
           const doj = dojazdyDnia(d);
           return (
