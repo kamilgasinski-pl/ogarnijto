@@ -4,16 +4,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
-import { rozpoznajTekst } from "@/lib/ocr";
+import { rozpoznajBloki } from "@/lib/ocr";
 import { DOMYSLNE, generujTest, type Parametry, type WynikGeneracji } from "@/lib/testy";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { TestPodglad } from "@/components/testy-podglad";
+import { Kadrowanie } from "@/components/testy-kadrowanie";
 
 export function NowyTest({ rodzinaId, rola }: { rodzinaId: string; rola: "uczen" | "rodzic" }) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
-  const [pliki, setPliki] = useState<File[]>([]);
+  const [zdjecia, setZdjecia] = useState<File[]>([]);
+  const [kadruj, setKadruj] = useState<File | null>(null);
+  const [bloki, setBloki] = useState<{ id: number; plik: Blob; wyciety: boolean; miniatura: string }[]>([]);
+  const [jakosc, setJakosc] = useState<{ pewnosc: number; odrzucone: number } | null>(null);
   const [tekst, setTekst] = useState("");
   const [postep, setPostep] = useState<{ nr: number; z: number; u: number } | null>(null);
   const [tytul, setTytul] = useState("");
@@ -23,17 +27,30 @@ export function NowyTest({ rodzinaId, rola }: { rodzinaId: string; rola: "uczen"
   const [blad, setBlad] = useState<string | null>(null);
   const [trwa, setTrwa] = useState(false);
 
+  function dodajBlok(plik: Blob, wyciety: boolean) {
+    setBloki((b) => [...b, { id: Date.now() + Math.random(), plik, wyciety, miniatura: URL.createObjectURL(plik) }]);
+  }
+  function usunBlok(id: number) {
+    setBloki((b) => b.filter((x) => x.id !== id));
+  }
+
   async function odczytaj() {
     setBlad(null);
+    setJakosc(null);
     try {
-      let calosc = tekst;
-      for (let i = 0; i < pliki.length; i++) {
-        setPostep({ nr: i + 1, z: pliki.length, u: 0 });
-        const t = await rozpoznajTekst(pliki[i], (u) => setPostep({ nr: i + 1, z: pliki.length, u }), { pasRodzaju: false });
-        calosc += (calosc ? "\n\n" : "") + t;
-      }
-      setTekst(calosc);
-      setPliki([]);
+      const wyniki = await rozpoznajBloki(
+        bloki.map((b) => ({ plik: b.plik, wyciety: b.wyciety })),
+        (nr, u) => setPostep({ nr: nr + 1, z: bloki.length, u }),
+      );
+      const polaczone = wyniki.map((w) => w.tekst).filter(Boolean).join("\n\n");
+      setTekst((t) => (t ? `${t}\n\n${polaczone}` : polaczone));
+      const slowa = wyniki.filter((w) => w.pewnosc > 0);
+      setJakosc({
+        pewnosc: slowa.length ? Math.round(slowa.reduce((s, w) => s + w.pewnosc, 0) / slowa.length) : 0,
+        odrzucone: wyniki.reduce((s, w) => s + w.odrzucone, 0),
+      });
+      setBloki([]);
+      setZdjecia([]);
     } catch {
       setBlad("Nie udało się odczytać zdjęcia. Spróbuj wyraźniejszego zdjęcia albo wklej tekst ręcznie.");
     } finally {
@@ -92,23 +109,54 @@ export function NowyTest({ rodzinaId, rola }: { rodzinaId: string; rola: "uczen"
       <section className="space-y-2 rounded-xl border border-gray-200 bg-white p-4">
         <h2 className="font-semibold">1. Zdjęcia rozdziału</h2>
         <p className="text-sm text-gray-500">
-          Zrób proste, wyraźne zdjęcia stron, bez cienia i pod prostym kątem. Rozpoznawanie tekstu
+          Zrób wyraźne zdjęcia stron, najlepiej jedna strona na zdjęcie, bez cienia i pod prostym kątem. Potem zaznacz tylko kolumny z tekstem (bez zdjęć i tabel). Rozpoznawanie tekstu
           dzieje się na tym urządzeniu, zdjęcia nigdzie nie są wysyłane.
         </p>
         <input
           type="file"
           accept="image/*"
           multiple
-          onChange={(e) => setPliki(Array.from(e.target.files ?? []))}
+          onChange={(e) => setZdjecia(Array.from(e.target.files ?? []))}
           className="block w-full text-sm"
         />
-        <Button onClick={odczytaj} disabled={pliki.length === 0 || postep !== null}>
-          {pliki.length > 0 ? `Odczytaj tekst (${pliki.length})` : "Odczytaj tekst"}
+        {zdjecia.length > 0 && (
+          <ul className="space-y-1.5">
+            {zdjecia.map((f, i) => (
+              <li key={`${f.name}${i}`} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-sm">
+                <span className="truncate">{f.name}</span>
+                <Button size="sm" variant="outline" onClick={() => setKadruj(f)}>Wybierz fragmenty</Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {bloki.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-sm text-gray-600">Do odczytu ({bloki.length}), w tej kolejności:</p>
+            <ul className="flex flex-wrap gap-2">
+              {bloki.map((b, i) => (
+                <li key={b.id} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={b.miniatura} alt={`Fragment ${i + 1}`} className="h-16 rounded border border-gray-300" />
+                  <button onClick={() => usunBlok(b.id)} aria-label="Usuń fragment" className="absolute -right-1.5 -top-1.5 h-5 w-5 rounded-full bg-gray-900 text-xs text-white">×</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <Button onClick={odczytaj} disabled={bloki.length === 0 || postep !== null}>
+          {bloki.length > 0 ? `Odczytaj tekst (${bloki.length})` : "Odczytaj tekst"}
         </Button>
+        {jakosc && (
+          <p className={`text-sm ${jakosc.pewnosc >= 75 ? "text-emerald-700" : "text-amber-700"}`}>
+            Pewność odczytu: {jakosc.pewnosc}%.
+            {jakosc.odrzucone > 0 && ` Pominięto ${jakosc.odrzucone} nieczytelnych linii.`}
+            {jakosc.pewnosc < 75 && " Spróbuj węższych fragmentów (jedna kolumna) i zdjęcia z lepszym światłem."}
+          </p>
+        )}
         {postep && (
           <div className="space-y-1">
             <p className="text-sm text-gray-600">
-              Zdjęcie {postep.nr} z {postep.z} · {Math.round(postep.u * 100)}%
+              Fragment {postep.nr} z {postep.z} · {Math.round(postep.u * 100)}%
             </p>
             <div className="h-1.5 overflow-hidden rounded-full bg-gray-200">
               <div className="h-full bg-gray-900 transition-all" style={{ width: `${postep.u * 100}%` }} />
@@ -143,6 +191,7 @@ export function NowyTest({ rodzinaId, rola }: { rodzinaId: string; rola: "uczen"
         </Button>
       </section>
 
+      {kadruj && <Kadrowanie plik={kadruj} onDodaj={dodajBlok} onZamknij={() => setKadruj(null)} />}
       {blad && <p className="text-sm text-red-600">{blad}</p>}
 
       {wynik && (
