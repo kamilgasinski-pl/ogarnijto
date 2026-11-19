@@ -16,6 +16,7 @@ import {
   KOLUMNY_ZADAN,
   type OsobaMini,
   type Podzadanie,
+  type Wykonawca,
   type Zadanie,
 } from "@/lib/zadania";
 
@@ -60,15 +61,15 @@ export default async function Pulpit({
   }
 
   // W piątek i weekend: ile zadań czeka na sobotę i niedzielę.
-  let weekend = 0;
+  let weekend: { przypisano_id: string | null; wykonawca: Wykonawca }[] = [];
   if (dzienNr >= 5) {
-    const { count } = await supabase
+    const { data } = await supabase
       .from("zadania")
-      .select("id", { count: "exact", head: true })
+      .select("przypisano_id, wykonawca")
       .eq("status", "do_zrobienia")
       .gt("termin", dzis)
       .lt("termin", jutro);
-    weekend = count ?? 0;
+    weekend = (data ?? []) as typeof weekend;
   }
 
   // Dzisiejsze lekcje.
@@ -112,6 +113,7 @@ export default async function Pulpit({
             rodzinaId={osoba.rodzina_id}
             osoby={(osobyDb ?? []) as OsobaMini[]}
             mojeId={osoba.id}
+            rola={osoba.rola}
             dzis={dzis}
             jutro={jutro}
             widok="pulpit"

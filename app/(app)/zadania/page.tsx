@@ -46,6 +46,7 @@ export default async function ZadaniaPage() {
         rodzinaId={osoba.rodzina_id}
         osoby={(osobyDb ?? []) as OsobaMini[]}
         mojeId={osoba.id}
+        rola={osoba.rola}
         dzis={dzis}
         jutro={jutroDlaWidoku(dzis)}
         widok="wszystkie"

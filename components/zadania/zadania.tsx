@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlarmClock, Check, ListChecks, Pencil, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -11,12 +11,14 @@ import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
 import {
   KOLUMNY_ZADAN,
+  jestMoje,
   jestZalegle,
   krotkaGodzina,
   nazwaWykonawcy,
   polaWykonawcy,
   type OsobaMini,
   type Podzadanie,
+  type Wykonawca,
   type Zadanie,
 } from "@/lib/zadania";
 import { ArkuszZadania } from "./arkusz-zadania";
@@ -27,10 +29,12 @@ type Props = {
   rodzinaId: string;
   osoby: OsobaMini[];
   mojeId: string;
+  rola: "uczen" | "rodzic";
   dzis: string;
   jutro: string;
   widok: "pulpit" | "wszystkie";
-  weekend?: number;
+  /** Zadania z soboty i niedzieli (do licznika "+ N zadań w weekend"). */
+  weekend?: { przypisano_id: string | null; wykonawca: Wykonawca }[];
   /** Tydzień pokazywany na pulpicie (poniedziałek–niedziela). */
   tydzien?: { start: string; numer: number; koniec: string; biezacy: boolean };
 };
@@ -53,10 +57,11 @@ export function Zadania({
   rodzinaId,
   osoby,
   mojeId,
+  rola,
   dzis,
   jutro,
   widok,
-  weekend = 0,
+  weekend = [],
   tydzien,
 }: Props) {
   const [supabase] = useState(() => createClient());
@@ -69,6 +74,24 @@ export function Zadania({
   const [tytul, setTytul] = useState("");
   const [termin, setTermin] = useState(dzis);
   const [kto, setKto] = useState(mojeId);
+
+  // Domyślny widok: dziecko widzi swoje zadania, rodzic wszystkie. Wybór
+  // użytkownika jest zapamiętany w tej przeglądarce.
+  const [filtr, setFiltr] = useState<"wszystkie" | "moje">(rola === "uczen" ? "moje" : "wszystkie");
+  const kluczFiltra = `ogarnijto.filtr.${mojeId}`;
+  useEffect(() => {
+    try {
+      const f = localStorage.getItem(kluczFiltra);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (f === "moje" || f === "wszystkie") setFiltr(f);
+    } catch {}
+  }, [kluczFiltra]);
+  function ustawFiltr(f: "wszystkie" | "moje") {
+    setFiltr(f);
+    try {
+      localStorage.setItem(kluczFiltra, f);
+    } catch {}
+  }
 
   const podDla = (id: string) => podzadania.filter((p) => p.zadanie_id === id);
 
@@ -105,8 +128,14 @@ export function Zadania({
     }
   }
 
-  const widoczne = zadania.filter((z) => pokazWykonane || widok === "pulpit" || z.status === "do_zrobienia");
-  const zalegle = zadania.filter((z) => jestZalegle(z, dzis)).sort(sortuj);
+  // Filtr "Moje" ogranicza wszystkie sekcje poniżej.
+  const mojeFiltr = (z: Pick<Zadanie, "przypisano_id" | "wykonawca">) =>
+    filtr === "wszystkie" || jestMoje(z, mojeId, rola);
+  const lista0 = zadania.filter(mojeFiltr);
+  const widoczne = lista0.filter((z) => pokazWykonane || widok === "pulpit" || z.status === "do_zrobienia");
+  const zalegle = lista0.filter((z) => jestZalegle(z, dzis)).sort(sortuj);
+  const weekendLiczba = weekend.filter(mojeFiltr).length;
+  const ukryte = zadania.length - lista0.length;
 
   function sekcja(naglowek: string, lista: Zadanie[], pusto?: string, dodatek?: React.ReactNode) {
     return (
@@ -145,7 +174,7 @@ export function Zadania({
     for (let i = 0; i < 7; i++) {
       const d = dodajDni(t.start, i);
       // sobotę i niedzielę pokazujemy tylko, gdy coś w nie wypada
-      if (i < 5 || zadania.some((z) => z.termin === d)) dni.push(d);
+      if (i < 5 || lista0.some((z) => z.termin === d)) dni.push(d);
     }
     return (
       <section className="space-y-3 border-t border-gray-200 pt-5">
@@ -163,7 +192,7 @@ export function Zadania({
           </div>
         </div>
         {dni.map((d) => {
-          const lista = zadania.filter((z) => z.termin === d).sort(sortuj);
+          const lista = lista0.filter((z) => z.termin === d).sort(sortuj);
           return (
             <div key={d} className="space-y-1.5">
               <h3 className={`text-sm font-semibold ${d === dzis ? "text-gray-900" : "text-gray-600"}`}>
@@ -198,8 +227,8 @@ export function Zadania({
 
   let tresc: React.ReactNode;
   if (widok === "pulpit") {
-    const dzisL = zadania.filter((z) => z.termin === dzis && !jestZalegle(z, dzis)).sort(sortuj);
-    const jutroL = zadania.filter((z) => z.termin === jutro).sort(sortuj);
+    const dzisL = lista0.filter((z) => z.termin === dzis && !jestZalegle(z, dzis)).sort(sortuj);
+    const jutroL = lista0.filter((z) => z.termin === jutro).sort(sortuj);
     tresc = (
       <>
         {zalegle.length > 0 && sekcja("Zaległe", zalegle)}
@@ -208,9 +237,9 @@ export function Zadania({
           etykietaDnia(jutro, dzis),
           jutroL,
           "Nic zaplanowane.",
-          weekend > 0 && (
+          weekendLiczba > 0 && (
             <Link href="/zadania" className="inline-block text-sm text-gray-500 underline">
-              + {liczba(weekend)} w weekend
+              + {liczba(weekendLiczba)} w weekend
             </Link>
           ),
         )}
@@ -262,6 +291,26 @@ export function Zadania({
         </form>
         {blad && <p className="mt-2 text-sm text-red-600">{blad}</p>}
       </Card>
+
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-gray-500">Pokaż:</span>
+        <div className="flex rounded-full bg-gray-200 p-0.5">
+          {(["moje", "wszystkie"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => ustawFiltr(f)}
+              className={`rounded-full px-4 py-1 ${filtr === f ? "bg-gray-900 text-white" : "text-gray-700"}`}
+            >
+              {f === "wszystkie" ? "Wszystkie" : "Moje"}
+            </button>
+          ))}
+        </div>
+        {filtr === "moje" && ukryte > 0 && (
+          <span className="text-gray-400">
+            ({ukryte} {ukryte === 1 ? "zadanie innej osoby ukryte" : "zadań innych osób ukrytych"})
+          </span>
+        )}
+      </div>
 
       {tresc}
 

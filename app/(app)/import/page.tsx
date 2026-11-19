@@ -4,7 +4,10 @@ import { ImportLibrus } from "./import-librus";
 
 export default async function ImportPage() {
   const { supabase, osoba } = await wymagajRodziny();
-  const { data: przedmioty } = await supabase.from("przedmioty").select("nazwa");
+  const [{ data: przedmioty }, { data: uczniowie }] = await Promise.all([
+    supabase.from("przedmioty").select("nazwa"),
+    supabase.from("osoby").select("id").eq("rola", "uczen"),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -17,6 +20,7 @@ export default async function ImportPage() {
       </div>
       <ImportLibrus
         rodzinaId={osoba.rodzina_id}
+        uczenId={uczniowie?.length === 1 ? (uczniowie[0].id as string) : null}
         dzis={dzisiaj()}
         znanePrzedmioty={(przedmioty ?? []).map((p) => p.nazwa as string)}
       />

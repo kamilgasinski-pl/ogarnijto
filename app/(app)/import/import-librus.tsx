@@ -25,9 +25,9 @@ type Pozycja = {
   podzadania: string; // jedna pozycja w wierszu
 };
 
-type Props = { rodzinaId: string; dzis: string; znanePrzedmioty: string[] };
+type Props = { rodzinaId: string; uczenId: string | null; dzis: string; znanePrzedmioty: string[] };
 
-export function ImportLibrus({ rodzinaId, dzis, znanePrzedmioty }: Props) {
+export function ImportLibrus({ rodzinaId, uczenId, dzis, znanePrzedmioty }: Props) {
   const [supabase] = useState(() => createClient());
   const [tekst, setTekst] = useState("");
   const [zrodlo, setZrodlo] = useState<"wklejka" | "screen">("wklejka");
@@ -129,6 +129,7 @@ export function ImportLibrus({ rodzinaId, dzis, znanePrzedmioty }: Props) {
           opis: p.opis.trim() || null,
           kategoria: "lekcje",
           wykonawca: "dziecko",
+          przypisano_id: uczenId,
           zrodlo,
           klucz_dedup: kluczDedup({ typ: p.typ, przedmiot: p.przedmiot.trim() || null, termin: p.termin, nr_lekcji: nr }),
         })

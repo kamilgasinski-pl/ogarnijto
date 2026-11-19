@@ -117,3 +117,17 @@ export function opisDni(dni: number[]): string {
   if (d.length === 7) return "Codziennie";
   return d.map((x) => DNI_KROTKO[x - 1]).join(", ");
 }
+
+/**
+ * Czy zadanie jest "moje": przypisane do mnie, a bez przypisania do osoby
+ * decyduje pole wykonawcy ("oboje" dotyczy każdego).
+ */
+export function jestMoje(
+  z: Pick<Zadanie, "przypisano_id" | "wykonawca">,
+  mojeId: string,
+  rola: "uczen" | "rodzic",
+): boolean {
+  if (z.przypisano_id) return z.przypisano_id === mojeId;
+  if (z.wykonawca === "oba") return true;
+  return z.wykonawca === (rola === "rodzic" ? "rodzic" : "dziecko");
+}
