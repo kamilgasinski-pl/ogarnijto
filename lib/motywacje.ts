@@ -1,5 +1,5 @@
-/** Hasła motywacyjne pokazywane po ukończeniu wszystkich zadań na dziś. */
-export const MOTYWACJE: string[] = [
+/** Hasła motywacyjne (rodzaj żeński) pokazywane po ukończeniu wszystkich zadań na dziś. */
+export const MOTYWACJE_ZENSKIE: string[] = [
   "Dobra robota! Każde odhaczone zadanie to krok do przodu.",
   "Dzisiaj dałaś radę ze wszystkim. Tak trzymać!",
   "Mistrzostwo! Lista na dziś jest czysta.",
@@ -20,7 +20,7 @@ export const MOTYWACJE: string[] = [
   "Zielone światło na resztę dnia. Należy Ci się!",
   "Odhaczone! Poczuj tę satysfakcję.",
   "Czysta lista, czysta głowa.",
-  "Wiedziałam, że dasz radę. No i dałaś!",
+  "Od początku było wiadomo, że dasz radę. No i dałaś!",
   "Brawo Ty! Dzisiejsze cele osiągnięte.",
   "Gdy jest plan i wytrwałość, wszystko się udaje.",
   "Dziś wygrałaś z odkładaniem na później.",
@@ -90,7 +90,7 @@ export const MOTYWACJE: string[] = [
   "Z uśmiechem i z listą zadań na zero.",
   "Dzisiaj jesteś swoją najlepszą wersją.",
   "To, co dziś zrobiłaś, procentuje na długo.",
-  "Dumna z Ciebie? Powinnaś być!",
+  "Dumna z siebie? Powinnaś być!",
   "Brawo za skupienie i wytrwałość.",
   "Spokojny wieczór masz jak w banku.",
   "Odhaczyłaś wszystko. Czas na nagrodę!",
@@ -101,3 +101,34 @@ export const MOTYWACJE: string[] = [
   "Najlepsza motywacja to własny sukces. Właśnie go masz.",
   "Jesteś super. Kropka.",
 ];
+
+/** Pojedyncze zdania, których nie da się przerobić regułą. */
+const ZAMIANY_ZDAN: [string, string][] = [
+  ["Jesteś w tym naprawdę dobra!", "Jesteś w tym naprawdę dobry!"],
+  ["Jesteś coraz lepsza z dnia na dzień.", "Jesteś coraz lepszy z dnia na dzień."],
+  ["Zasłużony tytuł: Mistrzyni Planowania.", "Zasłużony tytuł: Mistrz Planowania."],
+  ["a będziesz niezatrzymana.", "a będziesz niezatrzymany."],
+  ["Wybierz sama!", "Wybierz sam!"],
+  ["zrobiłaś sama.", "zrobiłeś sam."],
+  ["zrobiłaś to sama.", "zrobiłeś to sam."],
+  ["Dumna z siebie? Powinnaś być!", "Dumny z siebie? Powinieneś być!"],
+  ["osiągnęłaś", "osiągnąłeś"],
+  ["Powinnaś", "Powinieneś"],
+];
+
+/** Wersja męska: czasowniki na -łaś zamieniamy na -łeś plus kilka wyjątków. */
+export const MOTYWACJE_MESKIE: string[] = MOTYWACJE_ZENSKIE.map((h) => {
+  let w = h;
+  for (const [a, b] of ZAMIANY_ZDAN) w = w.replace(a, b);
+  return w.replace(/(\p{L}+)łaś(?!\p{L})/gu, "$1łeś");
+});
+
+// Imiona męskie zakończone na "a".
+const MESKIE_NA_A = new Set(["kuba", "barnaba", "bonawentura", "kosma", "jarema", "saba", "zawisza", "jakubka"]);
+
+/** Płeć wnioskujemy z imienia: końcówka "a" oznacza imię żeńskie (poza wyjątkami). */
+export function haslaDla(imie: string | null | undefined): string[] {
+  const i = (imie ?? "").trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+  const zenskie = i.endsWith("a") && !MESKIE_NA_A.has(i);
+  return zenskie || i === "" ? MOTYWACJE_ZENSKIE : MOTYWACJE_MESKIE;
+}

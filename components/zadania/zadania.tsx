@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MOTYWACJE } from "@/lib/motywacje";
+import { haslaDla } from "@/lib/motywacje";
 import { ArkuszWyjatku } from "@/components/dojazdy/arkusz-wyjatku";
 import { AlarmClock, Bus, Car, Check, ChevronDown, ChevronRight, ListChecks, Pencil, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -42,7 +42,7 @@ export type DojazdWiersz = {
 const KOLORY_KONFETTI = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6"];
 
 /** Nagroda po ukończeniu wszystkich zadań na dziś. Własny obrazek: plik public/nagroda.jpg. */
-function Nagroda() {
+function Nagroda({ imie }: { imie: string }) {
   const [obrazek, setObrazek] = useState(true);
   const [haslo, setHaslo] = useState<string | null>(null);
   const [konfetti, setKonfetti] = useState<
@@ -51,14 +51,15 @@ function Nagroda() {
 
   useEffect(() => {
     // Losowanie dopiero po zamontowaniu (bez rozjazdu z renderem serwera).
-    let i = Math.floor(Math.random() * MOTYWACJE.length);
+    const hasla = haslaDla(imie);
+    let i = Math.floor(Math.random() * hasla.length);
     try {
       const ostatnie = Number(localStorage.getItem("ogarnijto.motywacja"));
-      if (MOTYWACJE.length > 1 && i === ostatnie) i = (i + 1 + Math.floor(Math.random() * (MOTYWACJE.length - 1))) % MOTYWACJE.length;
+      if (hasla.length > 1 && i === ostatnie) i = (i + 1 + Math.floor(Math.random() * (hasla.length - 1))) % hasla.length;
       localStorage.setItem("ogarnijto.motywacja", String(i));
     } catch {}
     /* eslint-disable react-hooks/set-state-in-effect */
-    setHaslo(MOTYWACJE[i]);
+    setHaslo(hasla[i]);
     setKonfetti(
       Array.from({ length: 60 }, (_, id) => ({
         id,
@@ -72,7 +73,7 @@ function Nagroda() {
     /* eslint-enable react-hooks/set-state-in-effect */
     const koniec = setTimeout(() => setKonfetti([]), 6500);
     return () => clearTimeout(koniec);
-  }, []);
+  }, [imie]);
 
   return (
     <div className="space-y-3 rounded-xl border border-emerald-300 bg-emerald-50 p-5 text-center">
@@ -381,7 +382,7 @@ export function Zadania({
     tresc = (
       <>
         {zalegle.length > 0 && sekcja("Zaległe", zalegle)}
-        {zalegle.length === 0 && dzisL.length > 0 && dzisL.every((z) => z.status === "zrobione") && <Nagroda />}
+        {zalegle.length === 0 && dzisL.length > 0 && dzisL.every((z) => z.status === "zrobione") && <Nagroda imie={osobaFiltru?.imie ?? osoby.find((o) => o.id === mojeId)?.imie ?? ""} />}
         {sekcja("Dziś", dzisL, "Nic na dziś. Można odpocząć albo dodać zadanie.", undefined, dojazdyDnia(dzis))}
         {sekcja(
           etykietaDnia(jutro, dzis),
