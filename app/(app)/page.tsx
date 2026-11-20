@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Bus, Car } from "lucide-react";
 import { wymagajRodziny } from "@/lib/auth";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Zadania, type DojazdWiersz } from "@/components/zadania/zadania";
@@ -150,6 +151,27 @@ export default async function Pulpit({
     }
   }
   const osobyMini = (osobyDb ?? []) as OsobaMini[];
+  // Plan dnia: lekcje i dojazdy (z oznaczeniem osoby, która odbiera lub odwozi) w jednej osi czasu.
+  type Pozycja =
+    | { rodzaj: "lekcja"; id: string; start: number; koniec: number; nazwa: string; sala: string | null; status: string }
+    | { rodzaj: "dojazd"; id: string; start: number; koniec: number | null; nazwa: string; ikona: "autobus" | "odwoz"; odwolany: boolean; zmieniony: boolean; imie: string | null; kolor: string | null };
+  const pozycjeDnia: Pozycja[] = [
+    ...lekcje.map((l): Pozycja => ({ rodzaj: "lekcja", ...l })),
+    ...dojazdy
+      .filter((d) => d.data === dzis)
+      .map((d): Pozycja => ({
+        rodzaj: "dojazd",
+        id: `d-${d.id}`,
+        start: naMinuty(d.start),
+        koniec: d.koniec ? naMinuty(d.koniec) : null,
+        nazwa: d.tytul,
+        ikona: d.rodzaj,
+        odwolany: d.odwolany,
+        zmieniony: d.zmieniony,
+        imie: osobyMini.find((o) => o.id === d.przypisano_id)?.imie ?? null,
+        kolor: osobyMini.length > 1 ? kolorOsoby(d.przypisano_id, osobyMini) : null,
+      })),
+  ].sort((a, b) => a.start - b.start);
   const zaIleDni = (iso: string) => Math.round((Date.parse(iso) - Date.parse(dzis)) / 86400000);
   const opisDni = (n: number) => (n === 0 ? "dziś" : n === 1 ? "jutro" : `za ${n} dni`);
 
@@ -182,21 +204,43 @@ export default async function Pulpit({
         <div className="space-y-6">
         <Card className="h-fit space-y-3">
           <CardTitle>{dzienNr <= 5 ? "Plan na dziś" : "Weekend"}</CardTitle>
-          {dzienNr > 5 ? (
-            <p className="text-sm text-gray-500">Dziś bez lekcji.</p>
-          ) : lekcje.length === 0 ? (
-            <p className="text-sm text-gray-500">Brak lekcji w planie.</p>
+          {pozycjeDnia.length === 0 ? (
+            <p className="text-sm text-gray-500">{dzienNr > 5 ? "Dziś bez lekcji." : "Brak lekcji w planie."}</p>
           ) : (
             <ul className="space-y-1.5 text-sm">
-              {lekcje.map((l) => (
-                <li key={l.id} className={l.status === "odwolana" ? "text-gray-400 line-through" : ""}>
-                  <span className="text-gray-500">
-                    {naCzas(l.start)}–{naCzas(l.koniec)}
-                  </span>{" "}
-                  <span className="font-medium">{l.nazwa}</span>
-                  {l.sala && <span className="text-gray-500"> · s. {l.sala}</span>}
-                </li>
-              ))}
+              {pozycjeDnia.map((x) =>
+                x.rodzaj === "lekcja" ? (
+                  <li key={x.id} className={x.status === "odwolana" ? "text-gray-400 line-through" : ""}>
+                    <span className="text-gray-500">
+                      {naCzas(x.start)}–{naCzas(x.koniec)}
+                    </span>{" "}
+                    <span className="font-medium">{x.nazwa}</span>
+                    {x.sala && <span className="text-gray-500"> · s. {x.sala}</span>}
+                  </li>
+                ) : (
+                  <li
+                    key={x.id}
+                    className={`flex flex-wrap items-center gap-x-1.5 rounded-md border border-dashed border-sky-300 bg-sky-50 px-2 py-1 ${x.odwolany ? "opacity-50" : ""}`}
+                  >
+                    {x.ikona === "autobus" ? <Bus size={14} className="text-sky-700" /> : <Car size={14} className="text-sky-700" />}
+                    <span className="text-sky-800">
+                      {naCzas(x.start)}
+                      {x.koniec != null && `–${naCzas(x.koniec)}`}
+                    </span>
+                    <span className={`font-medium ${x.odwolany ? "line-through" : ""}`}>{x.nazwa}</span>
+                    {x.zmieniony && <span className="rounded bg-amber-100 px-1 text-[11px] text-amber-800">zmiana</span>}
+                    {x.odwolany && <span className="text-[11px]">odwołany</span>}
+                    {x.imie && (
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                        style={x.kolor ? { backgroundColor: x.kolor + "22", color: x.kolor } : { backgroundColor: "#f3f4f6", color: "#374151" }}
+                      >
+                        {x.imie}
+                      </span>
+                    )}
+                  </li>
+                ),
+              )}
             </ul>
           )}
           <Link href="/plan" className="inline-block text-sm text-gray-500 underline">
