@@ -12,7 +12,7 @@ import { Czas } from "@/components/ui/czas";
 import { ArkuszWyjatku } from "@/components/dojazdy/arkusz-wyjatku";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { naCzas } from "@/lib/plan";
-import { RODZAJE, wystapienia, type Dojazd, type Rodzaj, type Wyjatek, type Wystapienie } from "@/lib/dojazdy";
+import { KIERUNKI, RODZAJE, wystapienia, type Dojazd, type Kierunek, type Rodzaj, type Wyjatek, type Wystapienie } from "@/lib/dojazdy";
 import { DNI_KROTKO, krotkaGodzina, opisDni, type OsobaMini } from "@/lib/zadania";
 
 type Props = {
@@ -28,6 +28,7 @@ type Props = {
 type Szkic = {
   id?: string;
   rodzaj: Rodzaj;
+  kierunek: Kierunek;
   tytul: string;
   opis: string;
   dni: number[];
@@ -57,6 +58,7 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
     setBlad(null);
     setSzkic({
       rodzaj: "autobus",
+      kierunek: "odjazd",
       tytul: "",
       opis: "",
       dni: [dzienTygodnia(dzis)],
@@ -73,6 +75,7 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
     setSzkic({
       id: d.id,
       rodzaj: d.rodzaj,
+      kierunek: d.kierunek,
       tytul: d.tytul,
       opis: d.opis ?? "",
       dni: d.dni,
@@ -95,6 +98,7 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
     setTrwa(true);
     const pola = {
       rodzaj: szkic.rodzaj,
+      kierunek: szkic.kierunek,
       tytul: szkic.tytul.trim(),
       opis: szkic.opis.trim() || null,
       dni: [...szkic.dni].sort((a, b) => a - b),
@@ -125,7 +129,7 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
     setSzkic({ ...szkic, dni: szkic.dni.includes(n) ? szkic.dni.filter((d) => d !== n) : [...szkic.dni, n] });
   }
 
-  const ikona = (r: Rodzaj) => <IkonaDojazdu rodzaj={r} size={18} className="mt-0.5 shrink-0 text-gray-500" />;
+  const ikona = (r: Rodzaj, k: Kierunek) => <IkonaDojazdu rodzaj={r} kierunek={k} size={18} className="mt-0.5 shrink-0 text-gray-500" />;
 
   return (
     <div className="space-y-6">
@@ -142,7 +146,7 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
                 key={`${w.dojazd.id}${w.data}`}
                 className={`flex items-start gap-3 rounded-lg border bg-white p-3 ${w.odwolany ? "border-gray-200 opacity-60" : "border-gray-200"}`}
               >
-                {ikona(w.dojazd.rodzaj)}
+                {ikona(w.dojazd.rodzaj, w.dojazd.kierunek)}
                 <div className="min-w-0 flex-1">
                   <p className={`text-sm font-medium ${w.odwolany ? "line-through" : ""}`}>{w.dojazd.tytul}</p>
                   <p className="mt-0.5 text-xs text-gray-500">
@@ -177,7 +181,7 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
           <ul className="space-y-2">
             {aktywne.map((d) => (
               <li key={d.id} className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3">
-                {ikona(d.rodzaj)}
+                {ikona(d.rodzaj, d.kierunek)}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{d.tytul}</p>
                   <p className="mt-0.5 text-xs text-gray-500">
@@ -231,13 +235,23 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
           <form onSubmit={zapisz} className="max-h-[92vh] w-full space-y-4 overflow-y-auto rounded-t-2xl bg-white p-5 md:max-w-lg md:rounded-2xl">
             <h2 className="text-lg font-semibold">{szkic.id ? "Edytuj dojazd" : "Nowy dojazd"}</h2>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="rodzaj">Rodzaj</Label>
-              <Select id="rodzaj" value={szkic.rodzaj} onChange={(e) => setSzkic({ ...szkic, rodzaj: e.target.value as Rodzaj })}>
-                {RODZAJE.map((r) => (
-                  <option key={r.wartosc} value={r.wartosc}>{r.etykieta}</option>
-                ))}
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="rodzaj">Pojazd</Label>
+                <Select id="rodzaj" value={szkic.rodzaj} onChange={(e) => setSzkic({ ...szkic, rodzaj: e.target.value as Rodzaj })}>
+                  {RODZAJE.map((r) => (
+                    <option key={r.wartosc} value={r.wartosc}>{r.etykieta}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="kierunek">Kierunek</Label>
+                <Select id="kierunek" value={szkic.kierunek} onChange={(e) => setSzkic({ ...szkic, kierunek: e.target.value as Kierunek })}>
+                  {KIERUNKI.map((k) => (
+                    <option key={k.wartosc} value={k.wartosc}>{k.etykieta}</option>
+                  ))}
+                </Select>
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="tytul">Nazwa</Label>

@@ -117,6 +117,7 @@ export default async function PlanPage({ searchParams }: Props) {
         dojazdy={dojazdy.map((x) => ({
           id: `${x.dojazd.id}${x.data}`,
           rodzaj: x.dojazd.rodzaj,
+          kierunek: x.dojazd.kierunek,
           tytul: x.dojazd.tytul,
           dzien: x.dzien,
           start: x.start,

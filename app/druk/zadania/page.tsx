@@ -165,7 +165,7 @@ export default async function DrukZadan({ searchParams }: Props) {
                 <ul className="space-y-2">
                   {doj.map((w) => (
                     <li key={w.dojazd.id + w.data} className="flex items-center gap-2 text-sm">
-                      <IkonaDojazdu rodzaj={w.dojazd.rodzaj} size={14} />
+                      <IkonaDojazdu rodzaj={w.dojazd.rodzaj} kierunek={w.dojazd.kierunek} size={14} />
                       <span className="font-medium">
                         {naCzas(w.start)}
                         {w.koniec != null && `–${naCzas(w.koniec)}`}

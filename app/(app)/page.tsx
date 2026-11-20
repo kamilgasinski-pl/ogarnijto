@@ -117,6 +117,7 @@ export default async function Pulpit({
       id: w.dojazd.id,
       data: w.data,
       rodzaj: w.dojazd.rodzaj,
+      kierunek: w.dojazd.kierunek,
       tytul: w.dojazd.tytul,
       start: naCzas(w.start),
       koniec: w.koniec != null ? naCzas(w.koniec) : null,
@@ -154,7 +155,7 @@ export default async function Pulpit({
   // Plan dnia: lekcje i dojazdy (z oznaczeniem osoby, która odbiera lub odwozi) w jednej osi czasu.
   type Pozycja =
     | { rodzaj: "lekcja"; id: string; start: number; koniec: number; nazwa: string; sala: string | null; status: string }
-    | { rodzaj: "dojazd"; id: string; start: number; koniec: number | null; nazwa: string; ikona: "autobus" | "dowoz" | "odwoz"; odwolany: boolean; zmieniony: boolean; imie: string | null; kolor: string | null };
+    | { rodzaj: "dojazd"; id: string; start: number; koniec: number | null; nazwa: string; ikona: "autobus" | "samochod"; kierunek: "odjazd" | "przyjazd"; odwolany: boolean; zmieniony: boolean; imie: string | null; kolor: string | null };
   const pozycjeDnia: Pozycja[] = [
     ...lekcje.map((l): Pozycja => ({ rodzaj: "lekcja", ...l })),
     ...dojazdy
@@ -166,6 +167,7 @@ export default async function Pulpit({
         koniec: d.koniec ? naMinuty(d.koniec) : null,
         nazwa: d.tytul,
         ikona: d.rodzaj,
+        kierunek: d.kierunek,
         odwolany: d.odwolany,
         zmieniony: d.zmieniony,
         imie: osobyMini.find((o) => o.id === d.przypisano_id)?.imie ?? null,
@@ -222,7 +224,7 @@ export default async function Pulpit({
                     key={x.id}
                     className={`flex flex-wrap items-center gap-x-1.5 rounded-md border border-dashed border-sky-300 bg-sky-50 px-2 py-1 ${x.odwolany ? "opacity-50" : ""}`}
                   >
-                    <IkonaDojazdu rodzaj={x.ikona} size={14} className="text-sky-700" />
+                    <IkonaDojazdu rodzaj={x.ikona} kierunek={x.kierunek} size={14} className="text-sky-700" />
                     <span className="text-sky-800">
                       {naCzas(x.start)}
                       {x.koniec != null && `–${naCzas(x.koniec)}`}

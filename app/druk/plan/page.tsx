@@ -9,7 +9,7 @@ import {
   type Przedmiot,
   type WierszBloku,
 } from "@/lib/plan";
-import { EMOJI_RODZAJU, KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, wystapienia, koniecNaPlanie, type Dojazd, type Wyjatek } from "@/lib/dojazdy";
+import { EMOJI_DOJAZDU, KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, wystapienia, koniecNaPlanie, type Dojazd, type Wyjatek } from "@/lib/dojazdy";
 import { PrzyciskDruku } from "./przycisk-druku";
 
 type Props = {
@@ -111,7 +111,7 @@ export default async function DrukPlanu({ searchParams }: Props) {
                     }}
                   >
                     <p className={`truncate font-semibold ${d.odwolany ? "line-through" : ""}`}>
-                      {EMOJI_RODZAJU[d.dojazd.rodzaj]} {d.dojazd.tytul}
+                      {EMOJI_DOJAZDU(d.dojazd.rodzaj, d.dojazd.kierunek)} {d.dojazd.tytul}
                     </p>
                     <p className="truncate">{naCzas(d.start)}{d.odwolany && " · odwołany"}</p>
                   </div>

@@ -31,7 +31,8 @@ import { ArkuszZadania } from "./arkusz-zadania";
 export type DojazdWiersz = {
   id: string;
   data: string;
-  rodzaj: "autobus" | "dowoz" | "odwoz";
+  rodzaj: "autobus" | "samochod";
+  kierunek: "odjazd" | "przyjazd";
   tytul: string;
   start: string;
   koniec: string | null;
@@ -120,7 +121,7 @@ function Znacznik({ kolor, imie }: { kolor: string; imie: string }) {
 function WierszDojazdu({ d, onEdytuj, kolor, imie }: { d: DojazdWiersz; onEdytuj: () => void; kolor?: string | null; imie?: string }) {
   return (
     <li style={kolor ? { borderLeftWidth: 5, borderLeftStyle: "solid", borderLeftColor: kolor } : undefined} className={`flex items-center gap-2 rounded-lg border border-dashed border-sky-400 bg-sky-50 px-3 py-2 text-sm text-sky-950 ${d.odwolany ? "opacity-50" : ""}`}>
-      <IkonaDojazdu rodzaj={d.rodzaj} size={16} className="shrink-0 text-sky-700" />
+      <IkonaDojazdu rodzaj={d.rodzaj} kierunek={d.kierunek} size={16} className="shrink-0 text-sky-700" />
       <span className="text-sky-800">
         {d.start}
         {d.koniec && `–${d.koniec}`}

@@ -1,19 +1,25 @@
 import { dodajDni, dzienTygodnia } from "@/lib/dates";
 import { naMinuty } from "@/lib/plan";
 
-export type Rodzaj = "autobus" | "dowoz" | "odwoz";
+export type Rodzaj = "autobus" | "samochod";
+export type Kierunek = "odjazd" | "przyjazd";
 
-export const EMOJI_RODZAJU: Record<Rodzaj, string> = { autobus: "🚌", dowoz: "🛫", odwoz: "🛬" };
+export const EMOJI_DOJAZDU = (r: Rodzaj, k: Kierunek) => `${r === "autobus" ? "🚌" : "🚗"}${k === "odjazd" ? "↗" : "↙"}`;
 
 export const RODZAJE: { wartosc: Rodzaj; etykieta: string }[] = [
   { wartosc: "autobus", etykieta: "Autobus" },
-  { wartosc: "dowoz", etykieta: "Dowóz (zawiezienie)" },
-  { wartosc: "odwoz", etykieta: "Odwóz (odebranie)" },
+  { wartosc: "samochod", etykieta: "Samochód (rodzic)" },
+];
+
+export const KIERUNKI: { wartosc: Kierunek; etykieta: string }[] = [
+  { wartosc: "odjazd", etykieta: "Odjazd / dowóz (wyjeżdża)" },
+  { wartosc: "przyjazd", etykieta: "Przyjazd / odbiór (przyjeżdża)" },
 ];
 
 export type Dojazd = {
   id: string;
   rodzaj: Rodzaj;
+  kierunek: Kierunek;
   tytul: string;
   opis: string | null;
   dni: number[];
@@ -33,7 +39,7 @@ export type Wyjatek = {
   godz_koniec: string | null;
 };
 
-export const KOLUMNY_DOJAZDOW = "id, rodzaj, tytul, opis, dni, godz_start, godz_koniec, przypisano_id, od, do_dnia";
+export const KOLUMNY_DOJAZDOW = "id, rodzaj, kierunek, tytul, opis, dni, godz_start, godz_koniec, przypisano_id, od, do_dnia";
 export const KOLUMNY_WYJATKOW = "id, dojazd_id, data, odwolany, godz_start, godz_koniec";
 
 /** Konkretny dojazd w konkretnym dniu, po uwzględnieniu wyjątków. */

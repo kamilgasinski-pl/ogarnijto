@@ -100,7 +100,8 @@ export function zWiersza(w: WierszBloku): Blok {
 /** Dojazd pokazywany na planerze (tylko do odczytu). */
 export type DojazdNaPlanie = {
   id: string;
-  rodzaj: "autobus" | "dowoz" | "odwoz";
+  rodzaj: "autobus" | "samochod";
+  kierunek: "odjazd" | "przyjazd";
   tytul: string;
   dzien: number;
   start: number;
