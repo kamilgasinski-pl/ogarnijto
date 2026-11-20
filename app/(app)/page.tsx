@@ -1,6 +1,4 @@
-import Link from "next/link";
-import { IkonaDojazdu } from "@/components/dojazdy/ikona";
-import { STYL_KIERUNKU } from "@/lib/dojazdy";
+import { PlanDnia, type PozycjaDnia } from "@/components/plan-dnia";
 import { wymagajRodziny } from "@/lib/auth";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Zadania, type DojazdWiersz } from "@/components/zadania/zadania";
@@ -80,27 +78,48 @@ export default async function Pulpit({
   }
 
   // Dzisiejsze lekcje.
-  let lekcje: { id: string; start: number; koniec: number; nazwa: string; sala: string | null; status: string }[] = [];
+  let lekcje: { id: string; start: number; koniec: number; nazwa: string; sala: string | null; status: string; zmiany: string[]; uwagi: string | null }[] = [];
   if (dzienNr <= 5) {
     await supabase.rpc("zapewnij_tydzien", { p_tydzien_start: poniedzialek(dzis) });
     const [{ data: bloki }, { data: przedmioty }] = await Promise.all([
       supabase
         .from("bloki_planu")
-        .select("id, godz_start, godz_koniec, przedmiot_id, sala, status")
+        .select("id, linia_id, godz_start, godz_koniec, przedmiot_id, sala, status, uwagi")
         .eq("tydzien_start", poniedzialek(dzis))
         .eq("dzien", dzienNr)
         .order("godz_start"),
       supabase.from("przedmioty").select("id, nazwa"),
     ]);
     const nazwy = new Map((przedmioty ?? []).map((p) => [p.id as string, p.nazwa as string]));
-    lekcje = (bloki ?? []).map((b) => ({
-      id: b.id as string,
-      start: naMinuty(b.godz_start as string),
-      koniec: naMinuty(b.godz_koniec as string),
-      nazwa: nazwy.get(b.przedmiot_id as string) ?? "Lekcja",
-      sala: b.sala as string | null,
-      status: b.status as string,
-    }));
+    // Porównanie ze stałym szablonem planu: wykrywamy zmianę godziny, sali albo przedmiotu na dziś.
+    const { data: szablonDb } = await supabase
+      .from("bloki_szablonu")
+      .select("id, godz_start, godz_koniec, przedmiot_id, sala")
+      .in("id", (bloki ?? []).map((b) => b.linia_id as string));
+    const szablon = new Map((szablonDb ?? []).map((x) => [x.id as string, x]));
+    lekcje = (bloki ?? []).map((b) => {
+      const start = naMinuty(b.godz_start as string);
+      const koniec = naMinuty(b.godz_koniec as string);
+      const bylo = szablon.get(b.linia_id as string);
+      const zmiany: string[] = [];
+      if (bylo && b.status !== "odwolana") {
+        const bs = naMinuty(bylo.godz_start as string);
+        const bk = naMinuty(bylo.godz_koniec as string);
+        if (bs !== start || bk !== koniec) zmiany.push(`było ${naCzas(bs)}–${naCzas(bk)}`);
+        if ((bylo.sala ?? "") !== ((b.sala as string | null) ?? "")) zmiany.push(`sala: było ${bylo.sala ?? "brak"}`);
+        if (bylo.przedmiot_id !== b.przedmiot_id) zmiany.push(`było: ${nazwy.get(bylo.przedmiot_id as string) ?? "inny przedmiot"}`);
+      }
+      return {
+        id: b.id as string,
+        start,
+        koniec,
+        nazwa: nazwy.get(b.przedmiot_id as string) ?? "Lekcja",
+        sala: b.sala as string | null,
+        status: b.status as string,
+        zmiany,
+        uwagi: (b.uwagi as string | null) || null,
+      };
+    });
   }
 
   // Dojazdy na dziś, jutro i wybrany tydzień (filtr Moje/Wszystkie działa po stronie widoku).
@@ -127,6 +146,7 @@ export default async function Pulpit({
       zmieniony: w.zmieniony,
       maWyjatek: !!w.wyjatek,
       opis: w.dojazd.opis,
+      bylo: w.zmieniony ? naCzas(naMinuty(w.dojazd.godz_start)) : null,
     }));
 
   // Najbliższe sprawdziany i kartkówki (60 dni do przodu) wraz z postępem nauki (umiem x/y).
@@ -155,23 +175,21 @@ export default async function Pulpit({
   }
   const osobyMini = (osobyDb ?? []) as OsobaMini[];
   // Plan dnia: lekcje i dojazdy (z oznaczeniem osoby, która odbiera lub odwozi) w jednej osi czasu.
-  type Pozycja =
-    | { rodzaj: "lekcja"; id: string; start: number; koniec: number; nazwa: string; sala: string | null; status: string }
-    | { rodzaj: "dojazd"; id: string; start: number; koniec: number | null; nazwa: string; ikona: "autobus" | "samochod"; kierunek: "odjazd" | "przyjazd"; odwolany: boolean; zmieniony: boolean; imie: string | null; kolor: string | null; opis: string | null };
-  const pozycjeDnia: Pozycja[] = [
-    ...lekcje.map((l): Pozycja => ({ rodzaj: "lekcja", ...l })),
+  const pozycjeDnia: PozycjaDnia[] = [
+    ...lekcje.map((l): PozycjaDnia => ({ rodzaj: "lekcja", ...l })),
     ...dojazdy
       .filter((d) => d.data === dzis)
-      .map((d): Pozycja => ({
+      .map((d): PozycjaDnia => ({
         rodzaj: "dojazd",
         id: `d-${d.id}`,
         start: naMinuty(d.start),
         koniec: d.koniec ? naMinuty(d.koniec) : null,
         nazwa: d.tytul,
-        ikona: d.rodzaj,
+        pojazd: d.rodzaj,
         kierunek: d.kierunek,
         odwolany: d.odwolany,
         zmieniony: d.zmieniony,
+        bylo: d.bylo ?? null,
         opis: d.opis ?? null,
         imie: osobyMini.find((o) => o.id === d.przypisano_id)?.imie ?? null,
         kolor: osobyMini.length > 1 ? kolorOsoby(d.przypisano_id, osobyMini) : null,
@@ -207,52 +225,12 @@ export default async function Pulpit({
           />
         </div>
         <div className="space-y-6">
-        <Card className="h-fit space-y-3">
-          <CardTitle>{dzienNr <= 5 ? "Plan na dziś" : "Weekend"}</CardTitle>
-          {pozycjeDnia.length === 0 ? (
-            <p className="text-sm text-gray-500">{dzienNr > 5 ? "Dziś bez lekcji." : "Brak lekcji w planie."}</p>
-          ) : (
-            <ul className="space-y-1.5 text-sm">
-              {pozycjeDnia.map((x) =>
-                x.rodzaj === "lekcja" ? (
-                  <li key={x.id} className={x.status === "odwolana" ? "text-gray-400 line-through" : ""}>
-                    <span className="text-gray-500">
-                      {naCzas(x.start)}–{naCzas(x.koniec)}
-                    </span>{" "}
-                    <span className="font-medium">{x.nazwa}</span>
-                    {x.sala && <span className="text-gray-500"> · s. {x.sala}</span>}
-                  </li>
-                ) : (
-                  <li
-                    key={x.id}
-                    className={`flex flex-wrap items-center gap-x-1.5 rounded-md border border-dashed ${STYL_KIERUNKU[x.kierunek].pulpit} px-2 py-1 ${x.odwolany ? "opacity-50" : ""}`}
-                  >
-                    <IkonaDojazdu rodzaj={x.ikona} kierunek={x.kierunek} size={14} className={STYL_KIERUNKU[x.kierunek].ikona} />
-                    <span className={STYL_KIERUNKU[x.kierunek].czas}>
-                      {naCzas(x.start)}
-                      {x.koniec != null && `–${naCzas(x.koniec)}`}
-                    </span>
-                    <span className={`font-medium ${x.odwolany ? "line-through" : ""}`}>{x.nazwa}</span>
-                    {x.zmieniony && <span className="rounded bg-amber-100 px-1 text-[11px] text-amber-800">zmiana</span>}
-                    {x.odwolany && <span className="text-[11px]">odwołany</span>}
-                    {x.imie && (
-                      <span
-                        className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                        style={x.kolor ? { backgroundColor: x.kolor + "22", color: x.kolor } : { backgroundColor: "#f3f4f6", color: "#374151" }}
-                      >
-                        {x.imie}
-                      </span>
-                    )}
-                    {x.opis && <p className="w-full whitespace-pre-line pl-5 text-xs text-gray-500">{x.opis}</p>}
-                  </li>
-                ),
-              )}
-            </ul>
-          )}
-          <Link href="/plan" className="inline-block text-sm text-gray-500 underline">
-            Cały plan
-          </Link>
-        </Card>
+        <PlanDnia
+          tytul={dzienNr <= 5 ? "Plan na dziś" : "Weekend"}
+          data={dataSlownie(dzis)}
+          pozycje={pozycjeDnia}
+          pusto={dzienNr > 5 ? "Dziś bez lekcji." : "Brak lekcji w planie."}
+        />
         <Card className="h-fit space-y-3">
           <CardTitle>Najbliższe sprawdziany i kartkówki</CardTitle>
           {nadchodzace.length === 0 ? (
