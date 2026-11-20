@@ -250,6 +250,14 @@ export function Zadania({
   async function przenies(z: Zadanie, nowyTermin: string) {
     setZadania((s) => s.map((x) => (x.id === z.id ? { ...x, termin: nowyTermin } : x)));
     const { error } = await supabase.from("zadania").update({ termin: nowyTermin }).eq("id", z.id);
+    // Zadanie powtarzalne ma już wystąpienie w tym dniu: zaległe łączymy z dzisiejszym, czyli usuwamy duplikat.
+    if (error?.code === "23505" && z.powtarzalne_id) {
+      const { error: e2 } = await supabase.from("zadania").delete().eq("id", z.id);
+      if (!e2) {
+        setZadania((s) => s.filter((x) => x.id !== z.id));
+        return;
+      }
+    }
     if (error) {
       setZadania((s) => s.map((x) => (x.id === z.id ? z : x)));
       setBlad(tlumaczBlad(error.message));
