@@ -261,7 +261,7 @@ export function Zadania({
     const { error } = await supabase.from("zadania").update({ termin: nowyTermin }).eq("id", z.id);
     // Zadanie powtarzalne ma już wystąpienie w tym dniu: zaległe łączymy z dzisiejszym, czyli usuwamy duplikat.
     if (error?.code === "23505" && z.powtarzalne_id) {
-      const { error: e2 } = await supabase.from("zadania").delete().eq("id", z.id);
+      const { error: e2 } = await supabase.rpc("pomin_termin", { p_zadanie: z.id });
       if (!e2) {
         setZadania((s) => s.filter((x) => x.id !== z.id));
         return;
