@@ -126,6 +126,7 @@ export default async function Pulpit({
       odwolany: w.odwolany,
       zmieniony: w.zmieniony,
       maWyjatek: !!w.wyjatek,
+      opis: w.dojazd.opis,
     }));
 
   // Najbliższe sprawdziany i kartkówki (60 dni do przodu) wraz z postępem nauki (umiem x/y).
@@ -156,7 +157,7 @@ export default async function Pulpit({
   // Plan dnia: lekcje i dojazdy (z oznaczeniem osoby, która odbiera lub odwozi) w jednej osi czasu.
   type Pozycja =
     | { rodzaj: "lekcja"; id: string; start: number; koniec: number; nazwa: string; sala: string | null; status: string }
-    | { rodzaj: "dojazd"; id: string; start: number; koniec: number | null; nazwa: string; ikona: "autobus" | "samochod"; kierunek: "odjazd" | "przyjazd"; odwolany: boolean; zmieniony: boolean; imie: string | null; kolor: string | null };
+    | { rodzaj: "dojazd"; id: string; start: number; koniec: number | null; nazwa: string; ikona: "autobus" | "samochod"; kierunek: "odjazd" | "przyjazd"; odwolany: boolean; zmieniony: boolean; imie: string | null; kolor: string | null; opis: string | null };
   const pozycjeDnia: Pozycja[] = [
     ...lekcje.map((l): Pozycja => ({ rodzaj: "lekcja", ...l })),
     ...dojazdy
@@ -171,6 +172,7 @@ export default async function Pulpit({
         kierunek: d.kierunek,
         odwolany: d.odwolany,
         zmieniony: d.zmieniony,
+        opis: d.opis ?? null,
         imie: osobyMini.find((o) => o.id === d.przypisano_id)?.imie ?? null,
         kolor: osobyMini.length > 1 ? kolorOsoby(d.przypisano_id, osobyMini) : null,
       })),
@@ -241,6 +243,7 @@ export default async function Pulpit({
                         {x.imie}
                       </span>
                     )}
+                    {x.opis && <p className="w-full whitespace-pre-line pl-5 text-xs text-gray-500">{x.opis}</p>}
                   </li>
                 ),
               )}

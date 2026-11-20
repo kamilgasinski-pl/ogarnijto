@@ -42,6 +42,7 @@ export type DojazdWiersz = {
   odwolany: boolean;
   zmieniony: boolean;
   maWyjatek: boolean;
+  opis?: string | null;
 };
 
 const KOLORY_KONFETTI = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6"];
@@ -114,7 +115,7 @@ function Nagroda({ imie }: { imie: string }) {
 
 function WierszDojazdu({ d, onEdytuj, kolor, imie }: { d: DojazdWiersz; onEdytuj: () => void; kolor?: string | null; imie?: string }) {
   return (
-    <li style={kolor ? { borderLeftWidth: 5, borderLeftStyle: "solid", borderLeftColor: kolor } : undefined} className={`flex items-center gap-2 rounded-lg border border-dashed ${STYL_KIERUNKU[d.kierunek].lista} px-3 py-2 text-sm ${d.odwolany ? "opacity-50" : ""}`}>
+    <li style={kolor ? { borderLeftWidth: 5, borderLeftStyle: "solid", borderLeftColor: kolor } : undefined} className={`flex flex-wrap items-center gap-2 rounded-lg border border-dashed ${STYL_KIERUNKU[d.kierunek].lista} px-3 py-2 text-sm ${d.odwolany ? "opacity-50" : ""}`}>
       <IkonaDojazdu rodzaj={d.rodzaj} kierunek={d.kierunek} size={16} className={`shrink-0 ${STYL_KIERUNKU[d.kierunek].ikona}`} />
       <span className={STYL_KIERUNKU[d.kierunek].czas}>
         {d.start}
@@ -132,6 +133,7 @@ function WierszDojazdu({ d, onEdytuj, kolor, imie }: { d: DojazdWiersz; onEdytuj
       >
         <Pencil size={16} />
       </button>
+      {d.opis && <p className="w-full whitespace-pre-line pl-6 text-xs text-gray-500">{d.opis}</p>}
     </li>
   );
 }
