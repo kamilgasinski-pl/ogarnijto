@@ -118,7 +118,7 @@ export default async function DrukZadan({ searchParams }: Props) {
                 <span className="mt-0.5 inline-block h-3.5 w-3.5 shrink-0 rounded-sm border-[1.5px] border-gray-700 text-center text-[10px] leading-3">
                   {p.wykonane ? "✓" : ""}
                 </span>
-                <span className={p.wykonane ? "text-gray-400 line-through" : ""}>{p.tresc}{p.ilosc ? ` · ${p.ilosc}` : ""}</span>
+                <span className={p.wykonane ? "text-gray-400 line-through" : ""}>{p.tresc}{p.ilosc ? ` · ${p.ilosc}` : ""}{p.notatka ? ` (${p.notatka})` : ""}</span>
               </li>
             ))}
           </ul>

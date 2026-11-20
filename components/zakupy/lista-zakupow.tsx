@@ -27,7 +27,8 @@ export function ListaZakupow({ zadanieId, rodzinaId, pozycje, osoby, onZmiana }:
   const [supabase] = useState(() => createClient());
   const [tresc, setTresc] = useState("");
   const [ilosc, setIlosc] = useState("");
-  const [edycja, setEdycja] = useState<{ id: string; tresc: string; ilosc: string } | null>(null);
+  const [notatka, setNotatka] = useState("");
+  const [edycja, setEdycja] = useState<{ id: string; tresc: string; ilosc: string; notatka: string } | null>(null);
   const [blad, setBlad] = useState<string | null>(null);
   const ref = useRef(pozycje);
   const zajety = useRef(false);
@@ -73,6 +74,7 @@ export function ListaZakupow({ zadanieId, rodzinaId, pozycje, osoby, onZmiana }:
       zadanie_id: zadanieId,
       tresc: t,
       ilosc: linie.length === 1 ? ilosc.trim() || null : null,
+      notatka: linie.length === 1 ? notatka.trim() || null : null,
       kolejnosc: start + i + 1,
     }));
     const { data, error } = await zapisz(async () => supabase.from("podzadania").insert(wiersze).select(KOLUMNY_PODZADAN));
@@ -80,6 +82,7 @@ export function ListaZakupow({ zadanieId, rodzinaId, pozycje, osoby, onZmiana }:
     onZmiana([...pozycje, ...((data ?? []) as Podzadanie[])]);
     setTresc("");
     setIlosc("");
+    setNotatka("");
   }
 
   async function przelacz(p: Podzadanie) {
@@ -95,7 +98,7 @@ export function ListaZakupow({ zadanieId, rodzinaId, pozycje, osoby, onZmiana }:
     if (!edycja) return;
     const t = edycja.tresc.trim();
     if (!t) return setBlad("Nazwa pozycji nie może być pusta.");
-    const pola = { tresc: t, ilosc: edycja.ilosc.trim() || null };
+    const pola = { tresc: t, ilosc: edycja.ilosc.trim() || null, notatka: edycja.notatka.trim() || null };
     const { error } = await zapisz(async () => supabase.from("podzadania").update(pola).eq("id", edycja.id));
     if (error) return setBlad(tlumaczBlad(error.message));
     onZmiana(pozycje.map((x) => (x.id === edycja.id ? { ...x, ...pola } : x)));
@@ -178,6 +181,13 @@ export function ListaZakupow({ zadanieId, rodzinaId, pozycje, osoby, onZmiana }:
                       onChange={(e) => setEdycja({ ...edycja, ilosc: e.target.value })}
                       aria-label="Ilość"
                     />
+                    <Input
+                      className="h-9 w-full"
+                      placeholder="notatka, np. bez laktozy"
+                      value={edycja.notatka}
+                      onChange={(e) => setEdycja({ ...edycja, notatka: e.target.value })}
+                      aria-label="Notatka"
+                    />
                     <Button type="submit" size="sm">OK</Button>
                     <Button type="button" size="sm" variant="outline" onClick={() => setEdycja(null)}>Anuluj</Button>
                   </form>
@@ -186,13 +196,14 @@ export function ListaZakupow({ zadanieId, rodzinaId, pozycje, osoby, onZmiana }:
                     <span className={`min-w-0 flex-1 ${p.wykonane ? "text-gray-400 line-through" : ""}`}>
                       <span className="font-medium">{p.tresc}</span>
                       {p.ilosc && <span className="ml-1.5 text-gray-500">· {p.ilosc}</span>}
+                      {p.notatka && <span className="block whitespace-pre-line text-xs font-normal text-gray-500 no-underline">{p.notatka}</span>}
                     </span>
                     {kto && (k ? <ZnacznikOsoby kolor={k} imie={kto} /> : <span className="text-xs text-gray-500">{kto}</span>)}
                     <button
                       type="button"
                       aria-label="Edytuj pozycję"
                       title="Edytuj"
-                      onClick={() => setEdycja({ id: p.id, tresc: p.tresc, ilosc: p.ilosc ?? "" })}
+                      onClick={() => setEdycja({ id: p.id, tresc: p.tresc, ilosc: p.ilosc ?? "", notatka: p.notatka ?? "" })}
                       className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-900"
                     >
                       <Pencil size={15} />
@@ -245,6 +256,19 @@ export function ListaZakupow({ zadanieId, rodzinaId, pozycje, osoby, onZmiana }:
           <Plus size={16} />
         </Button>
       </div>
+      <Input
+        className="h-9 text-sm"
+        placeholder="Notatka do pozycji (opcjonalnie), np. bez laktozy, konkretna marka"
+        value={notatka}
+        onChange={(e) => setNotatka(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            dodaj();
+          }
+        }}
+        aria-label="Notatka do nowej pozycji"
+      />
       {blad && <p className="text-sm text-red-600">{blad}</p>}
     </div>
   );

@@ -32,11 +32,12 @@ export type Podzadanie = {
   wykonane: boolean;
   ilosc: string | null; // zakupy: np. "2 l"
   dodal: string | null; // zakupy: kto dopisał pozycję
+  notatka: string | null; // zakupy: uwaga do pozycji
 };
 
 export const KOLUMNY_ZADAN =
   "id, tytul, typ, termin, przedmiot, kategoria, wykonawca, opis, status, godz_start, godz_koniec, przypisano_id, powtarzalne_id, na_dzien";
-export const KOLUMNY_PODZADAN = "id, zadanie_id, tresc, kolejnosc, wykonane, ilosc, dodal";
+export const KOLUMNY_PODZADAN = "id, zadanie_id, tresc, kolejnosc, wykonane, ilosc, dodal, notatka";
 
 export const TYPY: { wartosc: Typ; etykieta: string }[] = [
   { wartosc: "zwykle", etykieta: "Zwykłe zadanie" },
