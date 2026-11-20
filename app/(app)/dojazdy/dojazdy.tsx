@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bus, Car, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
+import { IkonaDojazdu } from "@/components/dojazdy/ikona";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, dzienTygodnia, poniedzialek } from "@/lib/dates";
@@ -124,7 +125,7 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
     setSzkic({ ...szkic, dni: szkic.dni.includes(n) ? szkic.dni.filter((d) => d !== n) : [...szkic.dni, n] });
   }
 
-  const ikona = (r: Rodzaj) => (r === "autobus" ? <Bus size={18} className="mt-0.5 shrink-0 text-gray-400" /> : <Car size={18} className="mt-0.5 shrink-0 text-gray-400" />);
+  const ikona = (r: Rodzaj) => <IkonaDojazdu rodzaj={r} size={18} className="mt-0.5 shrink-0 text-gray-500" />;
 
   return (
     <div className="space-y-6">

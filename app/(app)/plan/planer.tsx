@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bus, Car } from "lucide-react";
+import { IkonaDojazdu } from "@/components/dojazdy/ikona";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, dzienTygodnia } from "@/lib/dates";
@@ -383,7 +383,6 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                   .filter((d) => d.dzien === n)
                   .map((d) => {
                     const wys = Math.max((d.koniec - d.start) * PPM - 1, 22);
-                    const Ikona = d.rodzaj === "autobus" ? Bus : Car;
                     const czas = `${naCzas(d.start)}${d.koniec - d.start > 30 ? `–${naCzas(d.koniec)}` : ""}`;
                     return (
                       <div
@@ -394,7 +393,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                         {wys >= 36 ? (
                           <div className="pt-0.5">
                             <p className={`flex items-center gap-1 font-semibold leading-tight ${d.odwolany ? "line-through" : ""}`}>
-                              <Ikona size={12} className="shrink-0" />
+                              <IkonaDojazdu rodzaj={d.rodzaj} size={12} className="shrink-0" />
                               <span className="break-words">{d.tytul}</span>
                             </p>
                             <p className="text-[11px] text-sky-800">
@@ -404,7 +403,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                           </div>
                         ) : (
                           <p className={`flex h-full items-center gap-1 truncate font-semibold ${d.odwolany ? "line-through" : ""}`}>
-                            <Ikona size={12} className="shrink-0" />
+                            <IkonaDojazdu rodzaj={d.rodzaj} size={12} className="shrink-0" />
                             <span className="truncate">
                               {naCzas(d.start)} {d.tytul}
                             </span>

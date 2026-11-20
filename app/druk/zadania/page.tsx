@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bus, Car } from "lucide-react";
+import { IkonaDojazdu } from "@/components/dojazdy/ikona";
 import { wymagajRodziny } from "@/lib/auth";
 import { dodajDni, dzienMiesiac, dzisiaj, etykietaDnia, jutroDlaWidoku, poniedzialek } from "@/lib/dates";
 import { KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, wystapienia, type Dojazd, type Wyjatek } from "@/lib/dojazdy";
@@ -165,7 +165,7 @@ export default async function DrukZadan({ searchParams }: Props) {
                 <ul className="space-y-2">
                   {doj.map((w) => (
                     <li key={w.dojazd.id + w.data} className="flex items-center gap-2 text-sm">
-                      {w.dojazd.rodzaj === "autobus" ? <Bus size={14} /> : <Car size={14} />}
+                      <IkonaDojazdu rodzaj={w.dojazd.rodzaj} size={14} />
                       <span className="font-medium">
                         {naCzas(w.start)}
                         {w.koniec != null && `–${naCzas(w.koniec)}`}

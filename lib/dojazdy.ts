@@ -1,11 +1,14 @@
 import { dodajDni, dzienTygodnia } from "@/lib/dates";
 import { naMinuty } from "@/lib/plan";
 
-export type Rodzaj = "autobus" | "odwoz";
+export type Rodzaj = "autobus" | "dowoz" | "odwoz";
+
+export const EMOJI_RODZAJU: Record<Rodzaj, string> = { autobus: "🚌", dowoz: "🛫", odwoz: "🛬" };
 
 export const RODZAJE: { wartosc: Rodzaj; etykieta: string }[] = [
   { wartosc: "autobus", etykieta: "Autobus" },
-  { wartosc: "odwoz", etykieta: "Odwóz / odbiór samochodem" },
+  { wartosc: "dowoz", etykieta: "Dowóz (zawiezienie)" },
+  { wartosc: "odwoz", etykieta: "Odwóz (odebranie)" },
 ];
 
 export type Dojazd = {

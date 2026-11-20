@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bus, Car } from "lucide-react";
+import { IkonaDojazdu } from "@/components/dojazdy/ikona";
 import { wymagajRodziny } from "@/lib/auth";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Zadania, type DojazdWiersz } from "@/components/zadania/zadania";
@@ -154,7 +154,7 @@ export default async function Pulpit({
   // Plan dnia: lekcje i dojazdy (z oznaczeniem osoby, która odbiera lub odwozi) w jednej osi czasu.
   type Pozycja =
     | { rodzaj: "lekcja"; id: string; start: number; koniec: number; nazwa: string; sala: string | null; status: string }
-    | { rodzaj: "dojazd"; id: string; start: number; koniec: number | null; nazwa: string; ikona: "autobus" | "odwoz"; odwolany: boolean; zmieniony: boolean; imie: string | null; kolor: string | null };
+    | { rodzaj: "dojazd"; id: string; start: number; koniec: number | null; nazwa: string; ikona: "autobus" | "dowoz" | "odwoz"; odwolany: boolean; zmieniony: boolean; imie: string | null; kolor: string | null };
   const pozycjeDnia: Pozycja[] = [
     ...lekcje.map((l): Pozycja => ({ rodzaj: "lekcja", ...l })),
     ...dojazdy
@@ -222,7 +222,7 @@ export default async function Pulpit({
                     key={x.id}
                     className={`flex flex-wrap items-center gap-x-1.5 rounded-md border border-dashed border-sky-300 bg-sky-50 px-2 py-1 ${x.odwolany ? "opacity-50" : ""}`}
                   >
-                    {x.ikona === "autobus" ? <Bus size={14} className="text-sky-700" /> : <Car size={14} className="text-sky-700" />}
+                    <IkonaDojazdu rodzaj={x.ikona} size={14} className="text-sky-700" />
                     <span className="text-sky-800">
                       {naCzas(x.start)}
                       {x.koniec != null && `–${naCzas(x.koniec)}`}
