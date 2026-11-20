@@ -98,7 +98,7 @@ export function ArkuszZadania({
     if (
       !confirm(
         powtarzalne
-          ? "To zadanie powtarza się co tydzień. Pominąć tylko ten termin? (Całą regułę odwołasz w zakładce Powtarzalne.)"
+          ? "To zadanie powtarza się co tydzień. Pominąć tylko ten termin? (Całą regułę możesz usunąć w zakładce Powtarzalne.)"
           : "Usunąć to zadanie razem z zadaniami cząstkowymi?",
       )
     )

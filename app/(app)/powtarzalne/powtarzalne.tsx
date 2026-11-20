@@ -152,6 +152,28 @@ export function Powtarzalne({ reguly, osoby, rodzinaId, mojeId, dzis }: Props) {
     router.refresh();
   }
 
+  // Usunięcie całkowite: reguła znika razem z jej zaplanowanymi, niewykonanymi zadaniami od dziś.
+  // Wykonane zadania i te z przeszłości zostają jako historia.
+  async function usun(r: Regula) {
+    if (
+      !confirm(
+        `Usunąć „${r.tytul}” całkowicie? Znikną też jej zaplanowane, niewykonane zadania od dziś. Wykonane i dawne zadania zostaną w historii.`,
+      )
+    )
+      return;
+    setBlad(null);
+    const { error: e1 } = await supabase
+      .from("zadania")
+      .delete()
+      .eq("powtarzalne_id", r.id)
+      .eq("status", "do_zrobienia")
+      .gte("termin", dzis);
+    if (e1) return setBlad(tlumaczBlad(e1.message));
+    const { error: e2 } = await supabase.from("zadania_powtarzalne").delete().eq("id", r.id);
+    if (e2) return setBlad(tlumaczBlad(e2.message));
+    router.refresh();
+  }
+
   function wiersz(r: Regula, koniec: boolean) {
     const od = krotkaGodzina(r.godz_start);
     const do_ = krotkaGodzina(r.godz_koniec);
@@ -169,14 +191,21 @@ export function Powtarzalne({ reguly, osoby, rodzinaId, mojeId, dzis }: Props) {
             {r.do_dnia ? `, do ${dzienMiesiac(r.do_dnia)}` : ", bez końca"}
           </p>
         </div>
-        {!koniec && (
-          <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
+          {!koniec && (
             <button aria-label="Edytuj regułę" title="Edytuj" onClick={() => edytuj(r)} className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-900">
               <Pencil size={16} />
             </button>
-            <Button size="sm" variant="outline" onClick={() => odwolaj(r)}>Odwołaj</Button>
-          </div>
-        )}
+          )}
+          {!koniec && r.od <= dzis && (
+            <Button size="sm" variant="outline" title="Kończy powtarzanie od jutra; dzisiejsze zadanie zostaje" onClick={() => odwolaj(r)}>
+              Odwołaj
+            </Button>
+          )}
+          <Button size="sm" variant="outline" title="Usuwa regułę i jej zaplanowane zadania" onClick={() => usun(r)}>
+            Usuń
+          </Button>
+        </div>
       </li>
     );
   }
