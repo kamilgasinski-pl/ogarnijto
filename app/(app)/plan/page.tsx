@@ -67,7 +67,7 @@ export default async function PlanPage({ searchParams }: Props) {
   const nawig = "rounded-full border border-gray-300 bg-white px-3 py-1.5 text-sm hover:bg-gray-100";
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
+    <div className="mx-auto max-w-[1700px] space-y-4">
       <div>
         <h1 className="text-3xl font-bold">Plan zajęć</h1>
         <p className="text-gray-500">

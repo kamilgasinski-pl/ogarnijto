@@ -24,7 +24,7 @@ import {
 } from "@/lib/plan";
 import { Arkusz, type Szkic } from "./arkusz";
 
-const PPM = 1.4; // pikseli na minutę
+const PPM = 1.75; // pikseli na minutę
 const KROK = 5; // przyciąganie do 5 minut
 const DOMYSLNY_CZAS = 45;
 
@@ -415,9 +415,9 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                             </p>
                           </div>
                         ) : (
-                          <p className={`flex h-full items-center gap-1 truncate font-semibold ${d.odwolany ? "line-through" : ""}`}>
+                          <p className={`flex h-full items-center gap-1 font-semibold leading-tight ${d.odwolany ? "line-through" : ""}`}>
                             <IkonaDojazdu rodzaj={d.rodzaj} kierunek={d.kierunek} size={12} className="shrink-0" />
-                            <span className="truncate">
+                            <span className="min-w-0 break-words">
                               {naCzas(d.start)} {d.tytul}
                             </span>
                             {imieOsoby && (
@@ -464,11 +464,11 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                         }}
                       >
                         <div className="px-1.5 pt-1">
-                          <p className={`truncate font-semibold ${odwolana ? "line-through" : ""}`}>
+                          <p className={`break-words font-semibold leading-tight ${odwolana ? "line-through" : ""}`}>
                             {b.nr_lekcji != null && <span className="mr-1 text-gray-500">{b.nr_lekcji}.</span>}
                             {p?.nazwa ?? "Lekcja"}
                           </p>
-                          <p className="truncate text-[11px] text-gray-600">
+                          <p className="break-words text-[11px] leading-tight text-gray-600">
                             {naCzas(b.start)}–{naCzas(b.koniec)}
                             {b.sala && ` · ${b.sala}`}
                           </p>
