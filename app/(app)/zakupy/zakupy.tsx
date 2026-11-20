@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Input, Label, Select } from "@/components/ui/input";
 import { ZnacznikOsoby } from "@/components/osoba-znacznik";
 import { ListaZakupow } from "@/components/zakupy/lista-zakupow";
+import { PodgladZakupow } from "@/components/zakupy/podglad-zakupow";
 import { KOLUMNY_ZADAN, kolorOsoby, polaWykonawcy, type OsobaMini, type Podzadanie, type Zadanie } from "@/lib/zadania";
 
 type Props = {
@@ -157,7 +158,11 @@ export function Zakupy({ listy: l0, pozycje: p0, osoby, rodzinaId, mojeId, dzis 
     );
   }
 
+  // Do podglądu: najpierw najbliższa lista od dziś wzwyż, potem zaległe.
+  const dlaPodgladu = [...otwarte].sort((a, b) => Number(a.termin < dzis) - Number(b.termin < dzis) || a.termin.localeCompare(b.termin));
+
   return (
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
     <div className="space-y-4">
       {blad && <p className="text-sm text-red-600">{blad}</p>}
       <datalist id="zk-sklepy">
@@ -167,9 +172,10 @@ export function Zakupy({ listy: l0, pozycje: p0, osoby, rodzinaId, mojeId, dzis 
       </datalist>
 
       <Card>
-        <form onSubmit={utworz} className="grid gap-3 sm:grid-cols-[1fr_9rem_9rem_11rem_auto] sm:items-end">
+        <form onSubmit={utworz} className="grid grid-cols-2 gap-3">
+          <h2 className="col-span-2 text-lg font-semibold">Nowa lista zakupów</h2>
           <div className="space-y-1.5">
-            <Label htmlFor="zk-tytul">Nowa lista zakupów</Label>
+            <Label htmlFor="zk-tytul">Nazwa</Label>
             <Input id="zk-tytul" value={tytul} onChange={(e) => setTytul(e.target.value)} placeholder="np. Zakupy na weekend" />
           </div>
           <div className="space-y-1.5">
@@ -189,7 +195,7 @@ export function Zakupy({ listy: l0, pozycje: p0, osoby, rodzinaId, mojeId, dzis 
               ))}
             </Select>
           </div>
-          <Button type="submit" disabled={trwa}>{trwa ? "Tworzę…" : "Utwórz listę"}</Button>
+          <Button type="submit" className="col-span-2" disabled={trwa}>{trwa ? "Tworzę…" : "Utwórz listę"}</Button>
         </form>
       </Card>
 
@@ -205,6 +211,10 @@ export function Zakupy({ listy: l0, pozycje: p0, osoby, rodzinaId, mojeId, dzis 
           <div className="mt-3 space-y-3">{zakonczone.map((z) => karta(z, true))}</div>
         </details>
       )}
+    </div>
+    <aside className="lg:sticky lg:top-4">
+      <PodgladZakupow listy={dlaPodgladu} pozycje={pozycje} osoby={osoby} dzis={dzis} />
+    </aside>
     </div>
   );
 }

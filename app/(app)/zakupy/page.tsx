@@ -26,7 +26,7 @@ export default async function ZakupyPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-6xl space-y-4">
       <div>
         <h1 className="text-3xl font-bold">Zakupy</h1>
         <p className="text-gray-500">

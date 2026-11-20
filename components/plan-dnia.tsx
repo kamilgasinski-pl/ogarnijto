@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { Camera, Check } from "lucide-react";
-import { toBlob } from "html-to-image";
+import { kopiujObraz } from "@/lib/zdjecie";
 import { Card, CardTitle } from "@/components/ui/card";
 import { IkonaDojazdu } from "@/components/dojazdy/ikona";
 import { STYL_KIERUNKU, type Kierunek, type Rodzaj } from "@/lib/dojazdy";
@@ -45,45 +45,6 @@ const ETYKIETY: Record<string, string> = {
   dodatkowa: "Dodatkowa",
 };
 
-/** Kopiuje element jako obraz PNG do schowka; gdy się nie da, udostępnia lub pobiera plik. */
-async function kopiujObraz(el: HTMLElement, nazwa: string): Promise<"schowek" | "udostepnione" | "pobrane"> {
-  const zrob = async () => {
-    const b = await toBlob(el, {
-      pixelRatio: 2,
-      backgroundColor: "#ffffff",
-      filter: (n) => !(n instanceof HTMLElement && n.dataset.bezZdjecia !== undefined),
-    });
-    if (!b) throw new Error("Nie udało się zrobić zdjęcia");
-    return b;
-  };
-  // Obietnica trafia do schowka od razu, żeby przeglądarka uznała to za reakcję na kliknięcie (Safari, iOS).
-  if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
-    try {
-      await navigator.clipboard.write([new ClipboardItem({ "image/png": zrob() })]);
-      return "schowek";
-    } catch {
-      /* próbujemy dalej */
-    }
-  }
-  const blob = await zrob();
-  const plik = new File([blob], nazwa, { type: "image/png" });
-  if (navigator.canShare?.({ files: [plik] })) {
-    try {
-      await navigator.share({ files: [plik], title: "Plan na dziś" });
-      return "udostepnione";
-    } catch {
-      /* anulowano: pobierz */
-    }
-  }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = nazwa;
-  a.click();
-  URL.revokeObjectURL(url);
-  return "pobrane";
-}
-
 export function PlanDnia({ tytul, data, pozycje, pusto }: { tytul: string; data: string; pozycje: PozycjaDnia[]; pusto: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [stan, setStan] = useState<"" | "trwa" | "schowek" | "udostepnione" | "pobrane" | "blad">("");
@@ -92,7 +53,7 @@ export function PlanDnia({ tytul, data, pozycje, pusto }: { tytul: string; data:
     if (!ref.current || stan === "trwa") return;
     setStan("trwa");
     try {
-      setStan(await kopiujObraz(ref.current, `plan-${data.replace(/\W+/g, "-")}.png`));
+      setStan(await kopiujObraz(ref.current, `plan-${data.replace(/\W+/g, "-")}.png`, "Plan na dziś"));
     } catch {
       setStan("blad");
     }
