@@ -5,12 +5,12 @@ import { wymagajRodziny } from "@/lib/auth";
 // glowny: widoczne w dolnym pasku na telefonie; reszta chowa się pod "Więcej".
 const linki = [
   { href: "/", etykieta: "Pulpit", ikona: Home, glowny: true },
-  { href: "/zadania", etykieta: "Zadania", ikona: ListChecks, glowny: true },
-  { href: "/zakupy", etykieta: "Zakupy", ikona: ShoppingCart, glowny: true },
-  { href: "/dojazdy", etykieta: "Dojazdy", ikona: Bus, glowny: true },
   { href: "/plan", etykieta: "Plan zajęć", ikona: CalendarDays, glowny: true },
+  { href: "/zadania", etykieta: "Zadania", ikona: ListChecks, glowny: true },
   { href: "/powtarzalne", etykieta: "Powtarzalne", ikona: Repeat, glowny: false },
   { href: "/import", etykieta: "Import", ikona: ClipboardPaste, glowny: false },
+  { href: "/dojazdy", etykieta: "Dojazdy", ikona: Bus, glowny: true },
+  { href: "/zakupy", etykieta: "Zakupy", ikona: ShoppingCart, glowny: true },
   { href: "/rodzina", etykieta: "Rodzina", ikona: Users, glowny: false },
 ];
 
