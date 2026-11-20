@@ -7,7 +7,7 @@ import { ArkuszWyjatku } from "@/components/dojazdy/arkusz-wyjatku";
 import { IkonaDojazdu } from "@/components/dojazdy/ikona";
 import { ZnacznikOsoby as Znacznik } from "@/components/osoba-znacznik";
 import { STYL_KIERUNKU } from "@/lib/dojazdy";
-import { AlarmClock, Check, ChevronDown, ChevronRight, ListChecks, Pencil, Repeat } from "lucide-react";
+import { AlarmClock, Check, ShoppingCart, ChevronDown, ChevronRight, ListChecks, Pencil, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, etykietaDnia } from "@/lib/dates";
@@ -605,6 +605,7 @@ function Wiersz({
               {do_ && `–${do_}`}
             </span>
           )}
+          {z.kategoria === "zakupy" && <ShoppingCart size={13} aria-label="Lista zakupów" className="text-gray-700" />}
           {z.powtarzalne_id && <Repeat size={12} aria-label="Powtarza się" />}
           {z.przedmiot && <span>{z.przedmiot}</span>}
           {zalegle && <span className="text-red-600">z {dzienMiesiac(z.termin)}</span>}
@@ -613,7 +614,7 @@ function Wiersz({
           {podzadania.length > 0 && (
             <span className="flex items-center gap-1">
               <ListChecks size={12} />
-              {test ? "umiem " : ""}
+              {test ? "umiem " : z.kategoria === "zakupy" ? "kupione " : ""}
               {umiem}/{podzadania.length}
             </span>
           )}

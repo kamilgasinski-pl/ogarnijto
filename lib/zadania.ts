@@ -1,7 +1,7 @@
 import { dodajDni, dzienTygodnia } from "@/lib/dates";
 
 export type Typ = "zwykle" | "sprawdzian" | "kartkowka";
-export type Kategoria = "lekcje" | "do_szkoly" | "platnosc" | "transport" | "inne";
+export type Kategoria = "lekcje" | "do_szkoly" | "platnosc" | "transport" | "inne" | "zakupy";
 export type Wykonawca = "dziecko" | "rodzic" | "oba";
 export type StatusZadania = "do_zrobienia" | "zrobione";
 
@@ -30,11 +30,13 @@ export type Podzadanie = {
   tresc: string;
   kolejnosc: number;
   wykonane: boolean;
+  ilosc: string | null; // zakupy: np. "2 l"
+  dodal: string | null; // zakupy: kto dopisał pozycję
 };
 
 export const KOLUMNY_ZADAN =
   "id, tytul, typ, termin, przedmiot, kategoria, wykonawca, opis, status, godz_start, godz_koniec, przypisano_id, powtarzalne_id, na_dzien";
-export const KOLUMNY_PODZADAN = "id, zadanie_id, tresc, kolejnosc, wykonane";
+export const KOLUMNY_PODZADAN = "id, zadanie_id, tresc, kolejnosc, wykonane, ilosc, dodal";
 
 export const TYPY: { wartosc: Typ; etykieta: string }[] = [
   { wartosc: "zwykle", etykieta: "Zwykłe zadanie" },
@@ -47,6 +49,7 @@ export const KATEGORIE: { wartosc: Kategoria; etykieta: string }[] = [
   { wartosc: "do_szkoly", etykieta: "Do szkoły" },
   { wartosc: "platnosc", etykieta: "Płatność" },
   { wartosc: "transport", etykieta: "Odwiezienie" },
+  { wartosc: "zakupy", etykieta: "Zakupy" },
   { wartosc: "inne", etykieta: "Inne" },
 ];
 
@@ -126,10 +129,11 @@ export function opisDni(dni: number[]): string {
  * decyduje pole wykonawcy ("oboje" dotyczy każdego).
  */
 export function jestMoje(
-  z: Pick<Zadanie, "przypisano_id" | "wykonawca">,
+  z: Pick<Zadanie, "przypisano_id" | "wykonawca"> & { kategoria?: Kategoria },
   mojeId: string,
   rola: "uczen" | "rodzic",
 ): boolean {
+  if (z.kategoria === "zakupy") return true; // lista zakupów jest wspólna: widzi ją cała rodzina
   if (z.przypisano_id) return z.przypisano_id === mojeId;
   if (z.wykonawca === "oba") return true;
   return z.wykonawca === (rola === "rodzic" ? "rodzic" : "dziecko");

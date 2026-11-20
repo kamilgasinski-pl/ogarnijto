@@ -5,10 +5,12 @@ import { Check, Plus, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { Button } from "@/components/ui/button";
+import { ListaZakupow } from "@/components/zakupy/lista-zakupow";
 import { Czas } from "@/components/ui/czas";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import {
   KATEGORIE,
+  KOLUMNY_PODZADAN,
   TYPY,
   krotkaGodzina,
   polaWykonawcy,
@@ -122,7 +124,7 @@ export function ArkuszZadania({
     const { data, error } = await supabase
       .from("podzadania")
       .insert(wiersze)
-      .select("id, zadanie_id, tresc, kolejnosc, wykonane");
+      .select(KOLUMNY_PODZADAN);
     if (error) return setBlad(tlumaczBlad(error.message));
     zmienListe([...lista, ...((data ?? []) as Podzadanie[])]);
     setNowe("");
@@ -235,52 +237,59 @@ export function ArkuszZadania({
           <Textarea id="opis" value={z.opis ?? ""} onChange={(e) => setZ({ ...z, opis: e.target.value })} />
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-baseline justify-between">
-            <Label>{test ? "Umiem (zakres materiału)" : "Zadania cząstkowe"}</Label>
-            {lista.length > 0 && (
-              <span className="text-xs text-gray-500">
-                {umiem}/{lista.length}
-              </span>
-            )}
+        {z.kategoria === "zakupy" ? (
+          <div className="space-y-2">
+            <Label>Lista zakupów</Label>
+            <ListaZakupow zadanieId={z.id} rodzinaId={rodzinaId} pozycje={lista} osoby={osoby} onZmiana={zmienListe} />
           </div>
-          <ul className="space-y-1">
-            {lista.map((p) => (
-              <li key={p.id} className="flex items-center gap-2 text-sm">
-                <button
-                  type="button"
-                  aria-label={p.wykonane ? "Odznacz" : "Zaznacz"}
-                  onClick={() => przelaczPodzadanie(p)}
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${p.wykonane ? "border-gray-900 bg-gray-900 text-white" : "border-gray-300"}`}
-                >
-                  {p.wykonane && <Check size={14} />}
-                </button>
-                <span className={`flex-1 ${p.wykonane ? "text-gray-400 line-through" : ""}`}>{p.tresc}</span>
-                <button type="button" aria-label="Usuń zadanie cząstkowe" className="text-gray-300 hover:text-red-600" onClick={() => usunPodzadanie(p)}>
-                  <Trash2 size={14} />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <div className="flex gap-2">
-            <Textarea
-              rows={1}
-              className="min-h-10"
-              placeholder="Dodaj pozycję (kilka linii = kilka pozycji)"
-              value={nowe}
-              onChange={(e) => setNowe(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  dodajPodzadania();
-                }
-              }}
-            />
-            <Button type="button" variant="outline" size="icon" className="h-10 w-10" aria-label="Dodaj" onClick={dodajPodzadania}>
-              <Plus size={16} />
-            </Button>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-baseline justify-between">
+              <Label>{test ? "Umiem (zakres materiału)" : "Zadania cząstkowe"}</Label>
+              {lista.length > 0 && (
+                <span className="text-xs text-gray-500">
+                  {umiem}/{lista.length}
+                </span>
+              )}
+            </div>
+            <ul className="space-y-1">
+              {lista.map((p) => (
+                <li key={p.id} className="flex items-center gap-2 text-sm">
+                  <button
+                    type="button"
+                    aria-label={p.wykonane ? "Odznacz" : "Zaznacz"}
+                    onClick={() => przelaczPodzadanie(p)}
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${p.wykonane ? "border-gray-900 bg-gray-900 text-white" : "border-gray-300"}`}
+                  >
+                    {p.wykonane && <Check size={14} />}
+                  </button>
+                  <span className={`flex-1 ${p.wykonane ? "text-gray-400 line-through" : ""}`}>{p.tresc}</span>
+                  <button type="button" aria-label="Usuń zadanie cząstkowe" className="text-gray-300 hover:text-red-600" onClick={() => usunPodzadanie(p)}>
+                    <Trash2 size={14} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-2">
+              <Textarea
+                rows={1}
+                className="min-h-10"
+                placeholder="Dodaj pozycję (kilka linii = kilka pozycji)"
+                value={nowe}
+                onChange={(e) => setNowe(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    dodajPodzadania();
+                  }
+                }}
+              />
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10" aria-label="Dodaj" onClick={dodajPodzadania}>
+                <Plus size={16} />
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
         {blad && <p className="text-sm text-red-600">{blad}</p>}
         <div className="flex gap-2">
