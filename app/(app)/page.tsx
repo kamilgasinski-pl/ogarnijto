@@ -6,6 +6,7 @@ import {
   dataSlownie,
   dodajDni,
   dzienTygodnia,
+  dzienMiesiac,
   dzisiaj,
   jutroDlaWidoku,
   poniedzialek,
@@ -15,6 +16,8 @@ import { naCzas, naMinuty } from "@/lib/plan";
 import { KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, wystapienia, type Dojazd, type Wyjatek } from "@/lib/dojazdy";
 import {
   KOLUMNY_PODZADAN,
+  kolorOsoby,
+  nazwaWykonawcy,
   KOLUMNY_ZADAN,
   type OsobaMini,
   type Podzadanie,
@@ -122,6 +125,34 @@ export default async function Pulpit({
       maWyjatek: !!w.wyjatek,
     }));
 
+  // Najbliższe sprawdziany i kartkówki (60 dni do przodu) wraz z postępem nauki (umiem x/y).
+  const { data: testyDb } = await supabase
+    .from("zadania")
+    .select(KOLUMNY_ZADAN)
+    .in("typ", ["sprawdzian", "kartkowka"])
+    .eq("status", "do_zrobienia")
+    .gte("termin", dzis)
+    .lte("termin", dodajDni(dzis, 60))
+    .order("termin")
+    .limit(8);
+  const nadchodzace = (testyDb ?? []) as Zadanie[];
+  const postep = new Map<string, { ok: number; razem: number }>();
+  if (nadchodzace.length > 0) {
+    const { data } = await supabase
+      .from("podzadania")
+      .select("zadanie_id, wykonane")
+      .in("zadanie_id", nadchodzace.map((z) => z.id));
+    for (const r of data ?? []) {
+      const e = postep.get(r.zadanie_id as string) ?? { ok: 0, razem: 0 };
+      e.razem++;
+      if (r.wykonane) e.ok++;
+      postep.set(r.zadanie_id as string, e);
+    }
+  }
+  const osobyMini = (osobyDb ?? []) as OsobaMini[];
+  const zaIleDni = (iso: string) => Math.round((Date.parse(iso) - Date.parse(dzis)) / 86400000);
+  const opisDni = (n: number) => (n === 0 ? "dziś" : n === 1 ? "jutro" : `za ${n} dni`);
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
@@ -148,6 +179,7 @@ export default async function Pulpit({
             tydzien={{ ...wybrany, biezacy: wybrany.start === tydzien.start }}
           />
         </div>
+        <div className="space-y-6">
         <Card className="h-fit space-y-3">
           <CardTitle>{dzienNr <= 5 ? "Plan na dziś" : "Weekend"}</CardTitle>
           {dzienNr > 5 ? (
@@ -171,6 +203,48 @@ export default async function Pulpit({
             Cały plan
           </Link>
         </Card>
+        <Card className="h-fit space-y-3">
+          <CardTitle>Najbliższe sprawdziany i kartkówki</CardTitle>
+          {nadchodzace.length === 0 ? (
+            <p className="text-sm text-gray-500">Brak zapowiedzianych sprawdzianów.</p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {nadchodzace.map((z) => {
+                const n = zaIleDni(z.termin);
+                const pil = n <= 2;
+                const pos = postep.get(z.id);
+                const kolor = osobyMini.length > 1 ? kolorOsoby(z.przypisano_id, osobyMini) : null;
+                const imie = nazwaWykonawcy(z, osobyMini);
+                return (
+                  <li
+                    key={z.id}
+                    className="rounded-lg border border-gray-200 bg-white p-2.5"
+                    style={kolor ? { borderLeftWidth: 5, borderLeftColor: kolor } : undefined}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium text-gray-900">
+                        <span className="mr-1.5 rounded bg-amber-100 px-1.5 text-xs font-normal text-amber-800">
+                          {z.typ === "sprawdzian" ? "Sprawdzian" : "Kartkówka"}
+                        </span>
+                        {z.przedmiot ?? z.tytul}
+                      </p>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${pil ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"}`}>
+                        {opisDni(n)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      {dzienMiesiac(z.termin)}
+                      {z.przedmiot && z.tytul !== z.przedmiot ? ` · ${z.tytul}` : ""}
+                      {pos && pos.razem > 0 ? ` · umiem ${pos.ok}/${pos.razem}` : ""}
+                      {kolor && imie ? <span style={{ color: kolor }}> · {imie}</span> : null}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+        </div>
       </div>
     </div>
   );
