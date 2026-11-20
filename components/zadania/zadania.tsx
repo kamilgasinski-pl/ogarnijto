@@ -16,7 +16,7 @@ import {
   jestMoje,
   jestZalegle,
   krotkaGodzina,
-  nazwaWykonawcy,
+  kolorOsoby, KOLORY_OSOB, nazwaWykonawcy,
   polaWykonawcy,
   type OsobaMini,
   type Podzadanie,
@@ -107,16 +107,25 @@ function Nagroda({ imie }: { imie: string }) {
   );
 }
 
-function WierszDojazdu({ d, onEdytuj }: { d: DojazdWiersz; onEdytuj: () => void }) {
+function Znacznik({ kolor, imie }: { kolor: string; imie: string }) {
+  return (
+    <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ backgroundColor: kolor + "22", color: kolor }}>
+      {imie}
+    </span>
+  );
+}
+
+function WierszDojazdu({ d, onEdytuj, kolor, imie }: { d: DojazdWiersz; onEdytuj: () => void; kolor?: string | null; imie?: string }) {
   const Ikona = d.rodzaj === "autobus" ? Bus : Car;
   return (
-    <li className={`flex items-center gap-2 rounded-lg border border-dashed border-sky-400 bg-sky-50 px-3 py-2 text-sm text-sky-950 ${d.odwolany ? "opacity-50" : ""}`}>
+    <li style={kolor ? { borderLeftWidth: 5, borderLeftStyle: "solid", borderLeftColor: kolor } : undefined} className={`flex items-center gap-2 rounded-lg border border-dashed border-sky-400 bg-sky-50 px-3 py-2 text-sm text-sky-950 ${d.odwolany ? "opacity-50" : ""}`}>
       <Ikona size={16} className="shrink-0 text-sky-700" />
       <span className="text-sky-800">
         {d.start}
         {d.koniec && `–${d.koniec}`}
       </span>
       <span className={`font-medium ${d.odwolany ? "line-through" : ""}`}>{d.tytul}</span>
+      {kolor && imie && <Znacznik kolor={kolor} imie={imie} />}
       {d.zmieniony && <span className="rounded bg-amber-100 px-1 text-[11px] text-amber-800">zmiana</span>}
       {d.odwolany && <span className="text-[11px]">odwołany</span>}
       <button
@@ -278,6 +287,11 @@ export function Zadania({
   const weekendLiczba = weekend.filter(mojeFiltr).length;
   const ukryte = zadania.length - lista0.length;
 
+  const kolorDla = (id: string | null) => {
+    const k = filtr === "wszystkie" && osoby.length > 1 ? kolorOsoby(id, osoby) : null;
+    return k ? { kolor: k, imie: osoby.find((o) => o.id === id)?.imie } : {};
+  };
+
   function sekcja(naglowek: string, lista: Zadanie[], pusto?: string, dodatek?: React.ReactNode, doj: DojazdWiersz[] = []) {
     return (
       <section key={naglowek} className="space-y-2">
@@ -289,11 +303,12 @@ export function Zadania({
         ) : (
           <ul className="space-y-1.5">
             {doj.map((x) => (
-              <WierszDojazdu key={x.id + x.data} d={x} onEdytuj={() => setDojazdEdycja(x)} />
+              <WierszDojazdu key={x.id + x.data} d={x} onEdytuj={() => setDojazdEdycja(x)} {...kolorDla(x.przypisano_id)} />
             ))}
             {lista.map((z) => (
               <Wiersz
                 key={z.id}
+                koloruj={filtr === "wszystkie"}
                 z={z}
                 podzadania={podDla(z.id)}
                 osoby={osoby}
@@ -359,11 +374,12 @@ export function Zadania({
               ) : (
                 <ul className="space-y-1.5">
                   {doj.map((x) => (
-                    <WierszDojazdu key={x.id + x.data} d={x} onEdytuj={() => setDojazdEdycja(x)} />
+                    <WierszDojazdu key={x.id + x.data} d={x} onEdytuj={() => setDojazdEdycja(x)} {...kolorDla(x.przypisano_id)} />
                   ))}
                   {lista.map((z) => (
                     <Wiersz
                       key={z.id}
+                      koloruj={filtr === "wszystkie"}
                       z={z}
                       podzadania={podDla(z.id)}
                       osoby={osoby}
@@ -485,6 +501,13 @@ export function Zadania({
             </button>
           ))}
         </div>
+        {filtr === "wszystkie" && osoby.length > 1 && (
+          <span className="flex flex-wrap items-center gap-2">
+            {osoby.map((o, i) => (
+              <Znacznik key={o.id} kolor={KOLORY_OSOB[i % KOLORY_OSOB.length]} imie={o.imie} />
+            ))}
+          </span>
+        )}
         {filtr !== "wszystkie" && ukryte > 0 && (
           <span className="text-gray-400">
             ({ukryte} {ukryte === 1 ? "zadanie innej osoby ukryte" : "zadań innych osób ukrytych"})
@@ -527,10 +550,12 @@ function Wiersz({
   osoby,
   zalegle,
   dzis,
+  koloruj,
   onStatus,
   onPrzenies,
   onOtworz,
 }: {
+  koloruj?: boolean;
   z: Zadanie;
   podzadania: Podzadanie[];
   osoby: OsobaMini[];
@@ -544,11 +569,13 @@ function Wiersz({
   const umiem = podzadania.filter((p) => p.wykonane).length;
   const test = z.typ !== "zwykle";
   const wykonawca = nazwaWykonawcy(z, osoby);
+  const kolor = koloruj && osoby.length > 1 ? kolorOsoby(z.przypisano_id, osoby) : null;
   const od = krotkaGodzina(z.godz_start);
   const do_ = krotkaGodzina(z.godz_koniec);
 
   return (
     <li
+      style={kolor ? { borderLeftWidth: 5, borderLeftColor: kolor } : undefined}
       className={`flex items-start gap-3 rounded-lg border bg-white p-3 ${zalegle ? "border-red-200 bg-red-50/40" : "border-gray-200"}`}
     >
       <button
@@ -579,7 +606,7 @@ function Wiersz({
           {z.powtarzalne_id && <Repeat size={12} aria-label="Powtarza się" />}
           {z.przedmiot && <span>{z.przedmiot}</span>}
           {zalegle && <span className="text-red-600">z {dzienMiesiac(z.termin)}</span>}
-          {wykonawca && <span>· {wykonawca}</span>}
+          {wykonawca && (kolor ? <Znacznik kolor={kolor} imie={wykonawca} /> : <span>· {wykonawca}</span>)}
           {podzadania.length > 0 && (
             <span className="flex items-center gap-1">
               <ListChecks size={12} />

@@ -131,3 +131,10 @@ export function jestMoje(
   if (z.wykonawca === "oba") return true;
   return z.wykonawca === (rola === "rodzic" ? "rodzic" : "dziecko");
 }
+
+/** Stałe kolory członków rodziny (wg kolejności na liście osób), by odróżnić ich zadania przy filtrze „Wszystkie”. */
+export const KOLORY_OSOB = ["#2563eb", "#db2777", "#16a34a", "#d97706", "#7c3aed", "#0891b2"];
+export function kolorOsoby(id: string | null, osoby: OsobaMini[]): string | null {
+  const i = osoby.findIndex((o) => o.id === id);
+  return i < 0 ? null : KOLORY_OSOB[i % KOLORY_OSOB.length];
+}
