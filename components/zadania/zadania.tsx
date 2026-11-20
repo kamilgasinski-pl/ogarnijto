@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { haslaDla } from "@/lib/motywacje";
 import { ArkuszWyjatku } from "@/components/dojazdy/arkusz-wyjatku";
 import { IkonaDojazdu } from "@/components/dojazdy/ikona";
@@ -184,8 +185,43 @@ export function Zadania({
   dojazdy = [],
 }: Props) {
   const [supabase] = useState(() => createClient());
+  const router = useRouter();
   const [zadania, setZadania] = useState(z0);
   const [podzadania, setPodzadania] = useState(p0);
+  // Gdy serwer przyśle świeże dane (np. po powrocie do aplikacji), zastępują lokalny stan.
+  const [poprzednie, setPoprzednie] = useState({ z0, p0 });
+  if (poprzednie.z0 !== z0 || poprzednie.p0 !== p0) {
+    setPoprzednie({ z0, p0 });
+    setZadania(z0);
+    setPodzadania(p0);
+  }
+  const zajete = useRef(0); // zapisy w toku: w tym czasie nie nadpisujemy stanu odświeżeniem
+
+  // Synchronizacja między urządzeniami: co kilkanaście sekund pobieramy zmienione zadania,
+  // a po powrocie do karty odświeżamy cały widok (m.in. zadania dodane na innym urządzeniu).
+  useEffect(() => {
+    let od = Date.now() - 60_000;
+    const lekko = async () => {
+      if (document.visibilityState !== "visible" || zajete.current > 0) return;
+      const poczatek = new Date(od).toISOString();
+      od = Date.now() - 30_000;
+      const { data } = await supabase.from("zadania").select(KOLUMNY_ZADAN).gte("updated_at", poczatek);
+      if (!data || data.length === 0 || zajete.current > 0) return;
+      const zmienione = new Map((data as unknown as Zadanie[]).map((x) => [x.id, x]));
+      setZadania((s) => s.map((x) => zmienione.get(x.id) ?? x));
+    };
+    const wroc = () => {
+      if (document.visibilityState !== "visible") return;
+      router.refresh();
+      lekko();
+    };
+    const t = setInterval(lekko, 15_000);
+    document.addEventListener("visibilitychange", wroc);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", wroc);
+    };
+  }, [supabase, router]);
   const [edycja, setEdycja] = useState<string | null>(null);
   const [blad, setBlad] = useState<string | null>(null);
   const [pokazWykonane, setPokazWykonane] = useState(false);
@@ -247,12 +283,37 @@ export function Zadania({
   }
 
   async function ustawStatus(z: Zadanie, status: Zadanie["status"]) {
-    setZadania((s) => s.map((x) => (x.id === z.id ? { ...x, status } : x)));
-    const { error } = await supabase.from("zadania").update({ status }).eq("id", z.id);
-    if (error) {
-      setZadania((s) => s.map((x) => (x.id === z.id ? z : x)));
-      setBlad(tlumaczBlad(error.message));
+    if (z.status === "zrobione" && status === "do_zrobienia" && rola !== "rodzic") {
+      return setBlad("Wykonane zadanie może ponownie otworzyć tylko rodzic.");
     }
+    setBlad(null);
+    zajete.current++;
+    setZadania((s) => s.map((x) => (x.id === z.id ? { ...x, status } : x)));
+    // Zmiana tylko wtedy, gdy zadanie ma jeszcze status, który widzimy: chroni przed nadpisaniem
+    // zmiany zrobionej w tym czasie na innym urządzeniu.
+    const { data, error } = await supabase
+      .from("zadania")
+      .update({ status })
+      .eq("id", z.id)
+      .eq("status", z.status)
+      .select(KOLUMNY_ZADAN);
+    if (error) {
+      zajete.current--;
+      setZadania((s) => s.map((x) => (x.id === z.id ? z : x)));
+      return setBlad(tlumaczBlad(error.message));
+    }
+    if (!data || data.length === 0) {
+      // Ktoś zmienił to zadanie wcześniej (inne urządzenie): pokazujemy aktualny stan z bazy.
+      const { data: aktualne } = await supabase.from("zadania").select(KOLUMNY_ZADAN).eq("id", z.id).maybeSingle();
+      zajete.current--;
+      const a = aktualne as unknown as Zadanie | null;
+      setZadania((s) => (a ? s.map((x) => (x.id === z.id ? a : x)) : s.filter((x) => x.id !== z.id)));
+      if (!a || a.status !== status) setBlad("To zadanie zostało właśnie zmienione na innym urządzeniu. Pokazano aktualny stan.");
+      return;
+    }
+    zajete.current--;
+    const nowe = data[0] as unknown as Zadanie;
+    setZadania((s) => s.map((x) => (x.id === z.id ? nowe : x)));
   }
 
   async function przenies(z: Zadanie, nowyTermin: string) {
@@ -308,6 +369,7 @@ export function Zadania({
               <Wiersz
                 key={z.id}
                 koloruj={filtr === "wszystkie"}
+                zablokowane={rola !== "rodzic"}
                 z={z}
                 podzadania={podDla(z.id)}
                 osoby={osoby}
@@ -379,6 +441,7 @@ export function Zadania({
                     <Wiersz
                       key={z.id}
                       koloruj={filtr === "wszystkie"}
+                      zablokowane={rola !== "rodzic"}
                       z={z}
                       podzadania={podDla(z.id)}
                       osoby={osoby}
@@ -553,11 +616,14 @@ function Wiersz({
   zalegle,
   dzis,
   koloruj,
+  zablokowane,
   onStatus,
   onPrzenies,
   onOtworz,
 }: {
   koloruj?: boolean;
+  /** Wykonanego zadania nie można odznaczyć (dziecko); cofnąć może tylko rodzic. */
+  zablokowane?: boolean;
   z: Zadanie;
   podzadania: Podzadanie[];
   osoby: OsobaMini[];
@@ -581,9 +647,11 @@ function Wiersz({
       className={`flex items-start gap-3 rounded-lg border bg-white p-3 ${zalegle ? "border-red-200 bg-red-50/40" : "border-gray-200"}`}
     >
       <button
-        aria-label={zrobione ? "Cofnij wykonanie" : "Oznacz jako zrobione"}
+        aria-label={zrobione ? (zablokowane ? "Zadanie wykonane" : "Cofnij wykonanie") : "Oznacz jako zrobione"}
+        title={zrobione && zablokowane ? "Wykonane zadanie może ponownie otworzyć tylko rodzic" : undefined}
+        disabled={zrobione && zablokowane}
         onClick={() => onStatus(z, zrobione ? "do_zrobienia" : "zrobione")}
-        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${zrobione ? "border-gray-900 bg-gray-900 text-white" : "border-gray-300 hover:border-gray-900"}`}
+        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${zrobione ? "border-gray-900 bg-gray-900 text-white" : "border-gray-300 hover:border-gray-900"} ${zrobione && zablokowane ? "cursor-not-allowed" : ""}`}
       >
         {zrobione && <Check size={14} />}
       </button>

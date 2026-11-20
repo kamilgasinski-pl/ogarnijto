@@ -42,44 +42,47 @@ export default async function Pulpit({
   // Zadania z reguł powtarzalnych: dopilnuj, by istniały dla widocznego zakresu.
   const od = [dzis, wybrany.start].sort()[0];
   const do_ = [jutro, wybrany.koniec].sort().reverse()[0];
-  await supabase.rpc("zapewnij_powtarzalne", { p_od: od, p_do: do_ });
-  const { data: osobyDb } = await supabase.from("osoby").select("id, imie, rola").order("created_at");
-
-  // Zadania: niewykonane do jutra (w tym zaległe) oraz wszystko z dziś i jutra.
-  const { data: zad } = await supabase
-    .from("zadania")
-    .select(KOLUMNY_ZADAN)
-    .or(
-      `and(status.eq.do_zrobienia,termin.lte.${jutro}),and(status.eq.do_zrobienia,na_dzien.lte.${dzis}),termin.in.(${dzis},${jutro}),and(termin.gte.${wybrany.start},termin.lte.${wybrany.koniec})`,
-    )
-    .order("termin");
-  const zadania = (zad ?? []) as Zadanie[];
-
-  let podzadania: Podzadanie[] = [];
-  if (zadania.length > 0) {
-    const { data } = await supabase
-      .from("podzadania")
-      .select(KOLUMNY_PODZADAN)
-      .in("zadanie_id", zadania.map((z) => z.id))
-      .order("kolejnosc");
-    podzadania = (data ?? []) as Podzadanie[];
-  }
+  // Niezależne części pulpitu pobieramy równolegle, a nie jedna po drugiej: każde zapytanie to
+  // osobna podróż do bazy, więc sekwencja znacznie wydłużała ładowanie (zwłaszcza na telefonie).
+  const zadaniaIPodzadania = async () => {
+    await supabase.rpc("zapewnij_powtarzalne", { p_od: od, p_do: do_ });
+    // Zadania: niewykonane do jutra (w tym zaległe) oraz wszystko z dziś i jutra.
+    const { data: zad } = await supabase
+      .from("zadania")
+      .select(KOLUMNY_ZADAN)
+      .or(
+        `and(status.eq.do_zrobienia,termin.lte.${jutro}),and(status.eq.do_zrobienia,na_dzien.lte.${dzis}),termin.in.(${dzis},${jutro}),and(termin.gte.${wybrany.start},termin.lte.${wybrany.koniec})`,
+      )
+      .order("termin");
+    const zadania = (zad ?? []) as Zadanie[];
+    let podzadania: Podzadanie[] = [];
+    if (zadania.length > 0) {
+      const { data } = await supabase
+        .from("podzadania")
+        .select(KOLUMNY_PODZADAN)
+        .in("zadanie_id", zadania.map((z) => z.id))
+        .order("kolejnosc");
+      podzadania = (data ?? []) as Podzadanie[];
+    }
+    return { zadania, podzadania };
+  };
 
   // W piątek i weekend: ile zadań czeka na sobotę i niedzielę.
-  let weekend: { przypisano_id: string | null; wykonawca: Wykonawca }[] = [];
-  if (dzienNr >= 5) {
+  const weekendLista = async () => {
+    if (dzienNr < 5) return [] as { przypisano_id: string | null; wykonawca: Wykonawca }[];
     const { data } = await supabase
       .from("zadania")
       .select("przypisano_id, wykonawca")
       .eq("status", "do_zrobienia")
       .gt("termin", dzis)
       .lt("termin", jutro);
-    weekend = (data ?? []) as typeof weekend;
-  }
+    return (data ?? []) as { przypisano_id: string | null; wykonawca: Wykonawca }[];
+  };
 
   // Dzisiejsze lekcje.
-  let lekcje: { id: string; start: number; koniec: number; nazwa: string; sala: string | null; status: string; zmiany: string[]; uwagi: string | null }[] = [];
-  if (dzienNr <= 5) {
+  type Lekcja = { id: string; start: number; koniec: number; nazwa: string; sala: string | null; status: string; zmiany: string[]; uwagi: string | null };
+  const lekcjeDnia = async (): Promise<Lekcja[]> => {
+    if (dzienNr > 5) return [];
     await supabase.rpc("zapewnij_tydzien", { p_tydzien_start: poniedzialek(dzis) });
     const [{ data: bloki }, { data: przedmioty }] = await Promise.all([
       supabase
@@ -97,7 +100,7 @@ export default async function Pulpit({
       .select("id, godz_start, godz_koniec, przedmiot_id, sala")
       .in("id", (bloki ?? []).map((b) => b.linia_id as string));
     const szablon = new Map((szablonDb ?? []).map((x) => [x.id as string, x]));
-    lekcje = (bloki ?? []).map((b) => {
+    return (bloki ?? []).map((b) => {
       const start = naMinuty(b.godz_start as string);
       const koniec = naMinuty(b.godz_koniec as string);
       const bylo = szablon.get(b.linia_id as string);
@@ -120,15 +123,55 @@ export default async function Pulpit({
         uwagi: (b.uwagi as string | null) || null,
       };
     });
-  }
+  };
 
   // Dojazdy na dziś, jutro i wybrany tydzień (filtr Moje/Wszystkie działa po stronie widoku).
   const odDoj = [dzis, wybrany.start].sort()[0];
   const doDoj = [jutro, wybrany.koniec].sort().reverse()[0];
-  const [{ data: dojDb }, { data: wyjDb }] = await Promise.all([
-    supabase.from("dojazdy").select(KOLUMNY_DOJAZDOW),
-    supabase.from("dojazdy_wyjatki").select(KOLUMNY_WYJATKOW).gte("data", odDoj).lte("data", doDoj),
-  ]);
+  const dojazdyDb = () =>
+    Promise.all([
+      supabase.from("dojazdy").select(KOLUMNY_DOJAZDOW),
+      supabase.from("dojazdy_wyjatki").select(KOLUMNY_WYJATKOW).gte("data", odDoj).lte("data", doDoj),
+    ]);
+
+  // Najbliższe sprawdziany i kartkówki (60 dni do przodu) wraz z postępem nauki (umiem x/y).
+  const sprawdziany = async () => {
+    const { data: testyDb } = await supabase
+      .from("zadania")
+      .select(KOLUMNY_ZADAN)
+      .in("typ", ["sprawdzian", "kartkowka"])
+      .eq("status", "do_zrobienia")
+      .gte("termin", dzis)
+      .lte("termin", dodajDni(dzis, 60))
+      .order("termin")
+      .limit(8);
+    const nadchodzace = (testyDb ?? []) as Zadanie[];
+    const postep = new Map<string, { ok: number; razem: number }>();
+    if (nadchodzace.length > 0) {
+      const { data } = await supabase
+        .from("podzadania")
+        .select("zadanie_id, wykonane")
+        .in("zadanie_id", nadchodzace.map((z) => z.id));
+      for (const r of data ?? []) {
+        const e = postep.get(r.zadanie_id as string) ?? { ok: 0, razem: 0 };
+        e.razem++;
+        if (r.wykonane) e.ok++;
+        postep.set(r.zadanie_id as string, e);
+      }
+    }
+    return { nadchodzace, postep };
+  };
+
+  const [{ data: osobyDb }, { zadania, podzadania }, weekend, lekcje, [{ data: dojDb }, { data: wyjDb }], { nadchodzace, postep }] =
+    await Promise.all([
+      supabase.from("osoby").select("id, imie, rola").order("created_at"),
+      zadaniaIPodzadania(),
+      weekendLista(),
+      lekcjeDnia(),
+      dojazdyDb(),
+      sprawdziany(),
+    ]);
+
   const widoczneDni = new Set([dzis, jutro]);
   for (let i = 0; i < 7; i++) widoczneDni.add(dodajDni(wybrany.start, i));
   const dojazdy: DojazdWiersz[] = wystapienia((dojDb ?? []) as Dojazd[], (wyjDb ?? []) as Wyjatek[], odDoj, doDoj)
@@ -149,30 +192,6 @@ export default async function Pulpit({
       bylo: w.zmieniony ? naCzas(naMinuty(w.dojazd.godz_start)) : null,
     }));
 
-  // Najbliższe sprawdziany i kartkówki (60 dni do przodu) wraz z postępem nauki (umiem x/y).
-  const { data: testyDb } = await supabase
-    .from("zadania")
-    .select(KOLUMNY_ZADAN)
-    .in("typ", ["sprawdzian", "kartkowka"])
-    .eq("status", "do_zrobienia")
-    .gte("termin", dzis)
-    .lte("termin", dodajDni(dzis, 60))
-    .order("termin")
-    .limit(8);
-  const nadchodzace = (testyDb ?? []) as Zadanie[];
-  const postep = new Map<string, { ok: number; razem: number }>();
-  if (nadchodzace.length > 0) {
-    const { data } = await supabase
-      .from("podzadania")
-      .select("zadanie_id, wykonane")
-      .in("zadanie_id", nadchodzace.map((z) => z.id));
-    for (const r of data ?? []) {
-      const e = postep.get(r.zadanie_id as string) ?? { ok: 0, razem: 0 };
-      e.razem++;
-      if (r.wykonane) e.ok++;
-      postep.set(r.zadanie_id as string, e);
-    }
-  }
   const osobyMini = (osobyDb ?? []) as OsobaMini[];
   // Plan dnia: lekcje i dojazdy (z oznaczeniem osoby, która odbiera lub odwozi) w jednej osi czasu.
   const pozycjeDnia: PozycjaDnia[] = [
