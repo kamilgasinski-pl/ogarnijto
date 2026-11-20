@@ -102,6 +102,7 @@ export type DojazdNaPlanie = {
   id: string;
   rodzaj: "autobus" | "samochod";
   kierunek: "odjazd" | "przyjazd";
+  przypisano_id: string | null;
   tytul: string;
   dzien: number;
   start: number;

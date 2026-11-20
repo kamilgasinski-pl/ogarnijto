@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { OsobaMini } from "@/lib/zadania";
 import { wymagajRodziny } from "@/lib/auth";
 import {
   dodajDni,
@@ -29,6 +30,7 @@ export default async function PlanPage({ searchParams }: Props) {
   const tydzien = poniedzialek(poprawna ? sp.tydzien! : dzis);
   const info = tydzienISO(tydzien);
 
+  const { data: osobyDb } = await supabase.from("osoby").select("id, imie, rola").order("created_at");
   const { data: przedmioty } = await supabase
     .from("przedmioty")
     .select("id, nazwa, kolor")
@@ -112,12 +114,14 @@ export default async function PlanPage({ searchParams }: Props) {
         tydzien={tydzien}
         rodzinaId={osoba.rodzina_id}
         dzis={dzis}
+        osoby={(osobyDb ?? []) as OsobaMini[]}
         przedmioty={(przedmioty ?? []) as Przedmiot[]}
         bloki={bloki}
         dojazdy={dojazdy.map((x) => ({
           id: `${x.dojazd.id}${x.data}`,
           rodzaj: x.dojazd.rodzaj,
           kierunek: x.dojazd.kierunek,
+          przypisano_id: x.dojazd.przypisano_id,
           tytul: x.dojazd.tytul,
           dzien: x.dzien,
           start: x.start,

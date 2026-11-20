@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { IkonaDojazdu } from "@/components/dojazdy/ikona";
 import { STYL_KIERUNKU } from "@/lib/dojazdy";
 import { createClient } from "@/lib/supabase/client";
+import { ZnacznikOsoby } from "@/components/osoba-znacznik";
+import { kolorOsoby, type OsobaMini } from "@/lib/zadania";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, dzienTygodnia } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
@@ -34,6 +36,7 @@ type Props = {
   przedmioty: Przedmiot[];
   bloki: WierszBloku[];
   dojazdy?: DojazdNaPlanie[];
+  osoby?: OsobaMini[];
 };
 
 type Podglad = { id: string; dzien: number; start: number; koniec: number };
@@ -57,7 +60,7 @@ function blokujPrzewijanie(e: TouchEvent) {
 
 const przyciagnij = (min: number) => Math.round(min / KROK) * KROK;
 
-export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: b0, dojazdy = [] }: Props) {
+export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: b0, dojazdy = [], osoby = [] }: Props) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
   const [przedmioty, setPrzedmioty] = useState(p0);
@@ -384,12 +387,18 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                   .filter((d) => d.dzien === n)
                   .map((d) => {
                     const wys = Math.max((d.koniec - d.start) * PPM - 1, 22);
+                    const imieOsoby = osoby.find((o) => o.id === d.przypisano_id)?.imie ?? null;
+                    const kolorOs = osoby.length > 1 ? kolorOsoby(d.przypisano_id, osoby) : null;
                     const czas = `${naCzas(d.start)}${d.koniec - d.start > 30 ? `–${naCzas(d.koniec)}` : ""}`;
                     return (
                       <div
                         key={d.id}
                         className={`pointer-events-none absolute inset-x-0.5 z-[5] overflow-hidden rounded-md border border-dashed ${STYL_KIERUNKU[d.kierunek].planer} px-1.5 text-xs ${d.odwolany ? "opacity-50" : ""}`}
-                        style={{ top: (d.start - godzOd) * PPM, height: wys }}
+                        style={{
+                          top: (d.start - godzOd) * PPM,
+                          height: wys,
+                          ...(kolorOs ? { borderLeftWidth: 5, borderLeftStyle: "solid", borderLeftColor: kolorOs } : {}),
+                        }}
                       >
                         {wys >= 36 ? (
                           <div className="pt-0.5">
@@ -397,9 +406,12 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                               <IkonaDojazdu rodzaj={d.rodzaj} kierunek={d.kierunek} size={12} className="shrink-0" />
                               <span className="break-words">{d.tytul}</span>
                             </p>
-                            <p className={`text-[11px] ${STYL_KIERUNKU[d.kierunek].czas}`}>
-                              {czas}
-                              {d.odwolany && " · odwołany"}
+                            <p className={`flex flex-wrap items-center gap-x-1 text-[11px] ${STYL_KIERUNKU[d.kierunek].czas}`}>
+                              <span>
+                                {czas}
+                                {d.odwolany && " · odwołany"}
+                              </span>
+                              {imieOsoby && (kolorOs ? <ZnacznikOsoby kolor={kolorOs} imie={imieOsoby} /> : <span>· {imieOsoby}</span>)}
                             </p>
                           </div>
                         ) : (
@@ -408,6 +420,11 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                             <span className="truncate">
                               {naCzas(d.start)} {d.tytul}
                             </span>
+                            {imieOsoby && (
+                              <span className="shrink-0 font-bold" style={kolorOs ? { color: kolorOs } : undefined}>
+                                {imieOsoby}
+                              </span>
+                            )}
                           </p>
                         )}
                       </div>

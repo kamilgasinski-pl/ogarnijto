@@ -1,3 +1,4 @@
+import { kolorOsoby, type OsobaMini } from "@/lib/zadania";
 import { wymagajRodziny } from "@/lib/auth";
 import { dodajDni, dzienMiesiac, dzisiaj, poniedzialek, tydzienISO } from "@/lib/dates";
 import {
@@ -25,6 +26,8 @@ export default async function DrukPlanu({ searchParams }: Props) {
   const info = tydzienISO(tydzien);
 
   const { data: przedmiotyDb } = await supabase.from("przedmioty").select("id, nazwa, kolor");
+  const { data: osobyDb } = await supabase.from("osoby").select("id, imie, rola").order("created_at");
+  const osoby = (osobyDb ?? []) as OsobaMini[];
   const przedmioty = (przedmiotyDb ?? []) as Przedmiot[];
 
   let wiersze: WierszBloku[];
@@ -113,7 +116,15 @@ export default async function DrukPlanu({ searchParams }: Props) {
                     <p className={`truncate font-semibold ${d.odwolany ? "line-through" : ""}`}>
                       {EMOJI_DOJAZDU(d.dojazd.rodzaj, d.dojazd.kierunek)} {d.dojazd.tytul}
                     </p>
-                    <p className="truncate">{naCzas(d.start)}{d.odwolany && " · odwołany"}</p>
+                    <p className="truncate">
+                      {naCzas(d.start)}
+                      {d.odwolany && " · odwołany"}
+                      {(() => {
+                        const o = osoby.find((x) => x.id === d.dojazd.przypisano_id);
+                        const k = osoby.length > 1 ? kolorOsoby(d.dojazd.przypisano_id, osoby) : null;
+                        return o ? <b style={k ? { color: k } : undefined}> · {o.imie}</b> : null;
+                      })()}
+                    </p>
                   </div>
                 ))}
               {bloki

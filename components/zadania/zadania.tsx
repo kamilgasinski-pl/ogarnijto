@@ -5,6 +5,7 @@ import Link from "next/link";
 import { haslaDla } from "@/lib/motywacje";
 import { ArkuszWyjatku } from "@/components/dojazdy/arkusz-wyjatku";
 import { IkonaDojazdu } from "@/components/dojazdy/ikona";
+import { ZnacznikOsoby as Znacznik } from "@/components/osoba-znacznik";
 import { STYL_KIERUNKU } from "@/lib/dojazdy";
 import { AlarmClock, Check, ChevronDown, ChevronRight, ListChecks, Pencil, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -108,14 +109,6 @@ function Nagroda({ imie }: { imie: string }) {
         />
       )}
     </div>
-  );
-}
-
-function Znacznik({ kolor, imie }: { kolor: string; imie: string }) {
-  return (
-    <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ backgroundColor: kolor + "22", color: kolor }}>
-      {imie}
-    </span>
   );
 }
 

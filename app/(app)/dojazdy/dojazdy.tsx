@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { IkonaDojazdu } from "@/components/dojazdy/ikona";
+import { ZnacznikOsoby } from "@/components/osoba-znacznik";
+import { kolorOsoby } from "@/lib/zadania";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, dzienTygodnia, poniedzialek } from "@/lib/dates";
@@ -53,6 +55,16 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
   const zakonczone = dojazdy.filter((d) => d.do_dnia && d.do_dnia < dzis);
   const wTygodniu = wystapienia(dojazdy, wyjatki, tydzien, dodajDni(tydzien, 6));
   const imie = (id: string | null) => osoby.find((o) => o.id === id)?.imie ?? null;
+  const kolorLista = (id: string | null) => (osoby.length > 1 ? kolorOsoby(id, osoby) : null);
+  const lewaRamka = (id: string | null) => {
+    const k = kolorLista(id);
+    return k ? { borderLeftWidth: 5, borderLeftColor: k } : undefined;
+  };
+  const pastylka = (id: string | null) => {
+    const k = kolorLista(id);
+    const n = imie(id);
+    return n ? (k ? <ZnacznikOsoby kolor={k} imie={n} /> : <span>{n}</span>) : null;
+  };
 
   function nowy() {
     setBlad(null);
@@ -144,6 +156,7 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
             {wTygodniu.map((w) => (
               <li
                 key={`${w.dojazd.id}${w.data}`}
+                style={lewaRamka(w.dojazd.przypisano_id)}
                 className={`flex items-start gap-3 rounded-lg border bg-white p-3 ${w.odwolany ? "border-gray-200 opacity-60" : "border-gray-200"}`}
               >
                 {ikona(w.dojazd.rodzaj, w.dojazd.kierunek)}
@@ -152,10 +165,10 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
                   <p className="mt-0.5 text-xs text-gray-500">
                     {DNI_KROTKO[w.dzien - 1]} {dzienMiesiac(w.data)} · {naCzas(w.start)}
                     {w.koniec != null && `–${naCzas(w.koniec)}`}
-                    {imie(w.dojazd.przypisano_id) && ` · ${imie(w.dojazd.przypisano_id)}`}
                     {w.odwolany && " · odwołany"}
                     {w.zmieniony && " · zmieniona godzina"}
                   </p>
+                  {w.dojazd.przypisano_id && <p className="mt-1">{pastylka(w.dojazd.przypisano_id)}</p>}
                 </div>
                 <Button
                   size="sm"
@@ -180,15 +193,15 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
         ) : (
           <ul className="space-y-2">
             {aktywne.map((d) => (
-              <li key={d.id} className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3">
+              <li key={d.id} style={lewaRamka(d.przypisano_id)} className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3">
                 {ikona(d.rodzaj, d.kierunek)}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{d.tytul}</p>
                   <p className="mt-0.5 text-xs text-gray-500">
                     {opisDni(d.dni)} · {krotkaGodzina(d.godz_start)}
                     {d.godz_koniec && `–${krotkaGodzina(d.godz_koniec)}`}
-                    {imie(d.przypisano_id) && ` · ${imie(d.przypisano_id)}`}
                   </p>
+                  {d.przypisano_id && <p className="mt-1">{pastylka(d.przypisano_id)}</p>}
                   {d.opis && <p className="text-xs text-gray-400">{d.opis}</p>}
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
