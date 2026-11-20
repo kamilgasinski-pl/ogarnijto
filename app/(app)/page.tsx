@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { IkonaDojazdu } from "@/components/dojazdy/ikona";
+import { STYL_KIERUNKU } from "@/lib/dojazdy";
 import { wymagajRodziny } from "@/lib/auth";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Zadania, type DojazdWiersz } from "@/components/zadania/zadania";
@@ -222,10 +223,10 @@ export default async function Pulpit({
                 ) : (
                   <li
                     key={x.id}
-                    className={`flex flex-wrap items-center gap-x-1.5 rounded-md border border-dashed border-sky-300 bg-sky-50 px-2 py-1 ${x.odwolany ? "opacity-50" : ""}`}
+                    className={`flex flex-wrap items-center gap-x-1.5 rounded-md border border-dashed ${STYL_KIERUNKU[x.kierunek].pulpit} px-2 py-1 ${x.odwolany ? "opacity-50" : ""}`}
                   >
-                    <IkonaDojazdu rodzaj={x.ikona} kierunek={x.kierunek} size={14} className="text-sky-700" />
-                    <span className="text-sky-800">
+                    <IkonaDojazdu rodzaj={x.ikona} kierunek={x.kierunek} size={14} className={STYL_KIERUNKU[x.kierunek].ikona} />
+                    <span className={STYL_KIERUNKU[x.kierunek].czas}>
                       {naCzas(x.start)}
                       {x.koniec != null && `–${naCzas(x.koniec)}`}
                     </span>

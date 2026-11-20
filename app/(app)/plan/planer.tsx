@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { IkonaDojazdu } from "@/components/dojazdy/ikona";
+import { STYL_KIERUNKU } from "@/lib/dojazdy";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, dzienTygodnia } from "@/lib/dates";
@@ -387,7 +388,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                     return (
                       <div
                         key={d.id}
-                        className={`pointer-events-none absolute inset-x-0.5 z-[5] overflow-hidden rounded-md border border-dashed border-sky-500 bg-sky-100 px-1.5 text-xs text-sky-950 ${d.odwolany ? "opacity-50" : ""}`}
+                        className={`pointer-events-none absolute inset-x-0.5 z-[5] overflow-hidden rounded-md border border-dashed ${STYL_KIERUNKU[d.kierunek].planer} px-1.5 text-xs ${d.odwolany ? "opacity-50" : ""}`}
                         style={{ top: (d.start - godzOd) * PPM, height: wys }}
                       >
                         {wys >= 36 ? (
@@ -396,7 +397,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                               <IkonaDojazdu rodzaj={d.rodzaj} kierunek={d.kierunek} size={12} className="shrink-0" />
                               <span className="break-words">{d.tytul}</span>
                             </p>
-                            <p className="text-[11px] text-sky-800">
+                            <p className={`text-[11px] ${STYL_KIERUNKU[d.kierunek].czas}`}>
                               {czas}
                               {d.odwolany && " · odwołany"}
                             </p>

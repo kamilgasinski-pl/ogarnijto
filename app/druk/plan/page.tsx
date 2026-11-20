@@ -9,7 +9,7 @@ import {
   type Przedmiot,
   type WierszBloku,
 } from "@/lib/plan";
-import { EMOJI_DOJAZDU, KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, wystapienia, koniecNaPlanie, type Dojazd, type Wyjatek } from "@/lib/dojazdy";
+import { EMOJI_DOJAZDU, STYL_KIERUNKU, KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, wystapienia, koniecNaPlanie, type Dojazd, type Wyjatek } from "@/lib/dojazdy";
 import { PrzyciskDruku } from "./przycisk-druku";
 
 type Props = {
@@ -103,7 +103,7 @@ export default async function DrukPlanu({ searchParams }: Props) {
                 .map((d) => (
                   <div
                     key={d.dojazd.id + d.data}
-                    className="absolute inset-x-0.5 overflow-hidden rounded-sm border border-dashed border-sky-500 bg-sky-50 px-1 py-0.5 text-[10px] leading-tight text-sky-900"
+                    className={`absolute inset-x-0.5 overflow-hidden rounded-sm border border-dashed ${STYL_KIERUNKU[d.dojazd.kierunek].druk} px-1 py-0.5 text-[10px] leading-tight`}
                     style={{
                       top: (d.start - od) * ppm,
                       height: Math.max((koniecNaPlanie(d) - d.start) * ppm - 1, 16),

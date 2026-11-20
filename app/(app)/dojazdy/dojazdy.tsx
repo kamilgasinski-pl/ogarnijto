@@ -12,7 +12,7 @@ import { Czas } from "@/components/ui/czas";
 import { ArkuszWyjatku } from "@/components/dojazdy/arkusz-wyjatku";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { naCzas } from "@/lib/plan";
-import { KIERUNKI, RODZAJE, wystapienia, type Dojazd, type Kierunek, type Rodzaj, type Wyjatek, type Wystapienie } from "@/lib/dojazdy";
+import { KIERUNKI, RODZAJE, STYL_KIERUNKU, wystapienia, type Dojazd, type Kierunek, type Rodzaj, type Wyjatek, type Wystapienie } from "@/lib/dojazdy";
 import { DNI_KROTKO, krotkaGodzina, opisDni, type OsobaMini } from "@/lib/zadania";
 
 type Props = {
@@ -129,7 +129,7 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
     setSzkic({ ...szkic, dni: szkic.dni.includes(n) ? szkic.dni.filter((d) => d !== n) : [...szkic.dni, n] });
   }
 
-  const ikona = (r: Rodzaj, k: Kierunek) => <IkonaDojazdu rodzaj={r} kierunek={k} size={18} className="mt-0.5 shrink-0 text-gray-500" />;
+  const ikona = (r: Rodzaj, k: Kierunek) => <IkonaDojazdu rodzaj={r} kierunek={k} size={18} className={`mt-0.5 shrink-0 ${STYL_KIERUNKU[k].ikona}`} />;
 
   return (
     <div className="space-y-6">

@@ -6,6 +6,31 @@ export type Kierunek = "odjazd" | "przyjazd";
 
 export const EMOJI_DOJAZDU = (r: Rodzaj, k: Kierunek) => `${r === "autobus" ? "🚌" : "🚗"}${k === "odjazd" ? "↗" : "↙"}`;
 
+/** Kolory dojazdów: odjazdy pomarańczowe, przyjazdy niebieskie (pełne nazwy klas, żeby Tailwind je wykrył). */
+export const STYL_KIERUNKU: Record<
+  Kierunek,
+  { pulpit: string; lista: string; planer: string; druk: string; czas: string; ikona: string; hover: string }
+> = {
+  odjazd: {
+    pulpit: "border-orange-300 bg-orange-50",
+    lista: "border-orange-400 bg-orange-50 text-orange-950",
+    planer: "border-orange-500 bg-orange-100 text-orange-950",
+    druk: "border-orange-500 bg-orange-50 text-orange-900",
+    czas: "text-orange-800",
+    ikona: "text-orange-700",
+    hover: "hover:bg-orange-100",
+  },
+  przyjazd: {
+    pulpit: "border-sky-300 bg-sky-50",
+    lista: "border-sky-400 bg-sky-50 text-sky-950",
+    planer: "border-sky-500 bg-sky-100 text-sky-950",
+    druk: "border-sky-500 bg-sky-50 text-sky-900",
+    czas: "text-sky-800",
+    ikona: "text-sky-700",
+    hover: "hover:bg-sky-100",
+  },
+};
+
 export const RODZAJE: { wartosc: Rodzaj; etykieta: string }[] = [
   { wartosc: "autobus", etykieta: "Autobus" },
   { wartosc: "samochod", etykieta: "Samochód (rodzic)" },

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { haslaDla } from "@/lib/motywacje";
 import { ArkuszWyjatku } from "@/components/dojazdy/arkusz-wyjatku";
 import { IkonaDojazdu } from "@/components/dojazdy/ikona";
+import { STYL_KIERUNKU } from "@/lib/dojazdy";
 import { AlarmClock, Check, ChevronDown, ChevronRight, ListChecks, Pencil, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
@@ -120,9 +121,9 @@ function Znacznik({ kolor, imie }: { kolor: string; imie: string }) {
 
 function WierszDojazdu({ d, onEdytuj, kolor, imie }: { d: DojazdWiersz; onEdytuj: () => void; kolor?: string | null; imie?: string }) {
   return (
-    <li style={kolor ? { borderLeftWidth: 5, borderLeftStyle: "solid", borderLeftColor: kolor } : undefined} className={`flex items-center gap-2 rounded-lg border border-dashed border-sky-400 bg-sky-50 px-3 py-2 text-sm text-sky-950 ${d.odwolany ? "opacity-50" : ""}`}>
-      <IkonaDojazdu rodzaj={d.rodzaj} kierunek={d.kierunek} size={16} className="shrink-0 text-sky-700" />
-      <span className="text-sky-800">
+    <li style={kolor ? { borderLeftWidth: 5, borderLeftStyle: "solid", borderLeftColor: kolor } : undefined} className={`flex items-center gap-2 rounded-lg border border-dashed ${STYL_KIERUNKU[d.kierunek].lista} px-3 py-2 text-sm ${d.odwolany ? "opacity-50" : ""}`}>
+      <IkonaDojazdu rodzaj={d.rodzaj} kierunek={d.kierunek} size={16} className={`shrink-0 ${STYL_KIERUNKU[d.kierunek].ikona}`} />
+      <span className={STYL_KIERUNKU[d.kierunek].czas}>
         {d.start}
         {d.koniec && `–${d.koniec}`}
       </span>
@@ -134,7 +135,7 @@ function WierszDojazdu({ d, onEdytuj, kolor, imie }: { d: DojazdWiersz; onEdytuj
         aria-label="Zmień ten dojazd"
         title="Zmień na ten dzień"
         onClick={onEdytuj}
-        className="ml-auto rounded-full p-1 text-sky-700 hover:bg-sky-100"
+        className={`ml-auto rounded-full p-1 ${STYL_KIERUNKU[d.kierunek].ikona} ${STYL_KIERUNKU[d.kierunek].hover}`}
       >
         <Pencil size={16} />
       </button>
