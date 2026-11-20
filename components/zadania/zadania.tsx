@@ -606,6 +606,7 @@ function Wiersz({
             </span>
           )}
           {z.kategoria === "zakupy" && <ShoppingCart size={13} aria-label="Lista zakupów" className="text-gray-700" />}
+          {z.kategoria === "zakupy" && z.sklep && <span className="font-medium text-gray-700">{z.sklep}</span>}
           {z.powtarzalne_id && <Repeat size={12} aria-label="Powtarza się" />}
           {z.przedmiot && <span>{z.przedmiot}</span>}
           {zalegle && <span className="text-red-600">z {dzienMiesiac(z.termin)}</span>}

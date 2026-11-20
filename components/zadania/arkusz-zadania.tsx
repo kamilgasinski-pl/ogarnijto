@@ -73,6 +73,7 @@ export function ArkuszZadania({
       typ: z.typ,
       termin: z.termin,
       na_dzien: z.na_dzien && z.na_dzien <= z.termin ? z.na_dzien : null,
+      sklep: z.kategoria === "zakupy" ? z.sklep?.trim() || null : null,
       przedmiot: z.przedmiot?.trim() || null,
       kategoria: z.kategoria,
       opis: z.opis?.trim() || null,
@@ -239,6 +240,10 @@ export function ArkuszZadania({
 
         {z.kategoria === "zakupy" ? (
           <div className="space-y-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="sklep">Sklep</Label>
+              <Input id="sklep" placeholder="np. Biedronka, Lidl, apteka" value={z.sklep ?? ""} onChange={(e) => setZ({ ...z, sklep: e.target.value })} />
+            </div>
             <Label>Lista zakupów</Label>
             <ListaZakupow zadanieId={z.id} rodzinaId={rodzinaId} pozycje={lista} osoby={osoby} onZmiana={zmienListe} />
           </div>

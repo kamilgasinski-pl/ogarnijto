@@ -28,6 +28,9 @@ export function Zakupy({ listy: l0, pozycje: p0, osoby, rodzinaId, mojeId, dzis 
   const [tytul, setTytul] = useState("Zakupy");
   const [termin, setTermin] = useState(dzis);
   const [kto, setKto] = useState(""); // id osoby robiącej zakupy, puste = jeszcze nie wiadomo
+  const [sklep, setSklep] = useState("");
+  // Dotychczasowe sklepy podpowiadają się przy wpisywaniu.
+  const sklepy = [...new Set(listy.map((z) => z.sklep).filter((s): s is string => !!s))];
   const [blad, setBlad] = useState<string | null>(null);
   const [trwa, setTrwa] = useState(false);
 
@@ -45,13 +48,25 @@ export function Zakupy({ listy: l0, pozycje: p0, osoby, rodzinaId, mojeId, dzis 
     const pola = kto ? { ...polaWykonawcy(kto, osoby), wykonawca: "oba" as const } : { przypisano_id: null, wykonawca: "oba" as const };
     const { data, error } = await supabase
       .from("zadania")
-      .insert({ rodzina_id: rodzinaId, tytul: tytul.trim() || "Zakupy", kategoria: "zakupy", termin, ...pola })
+      .insert({ rodzina_id: rodzinaId, tytul: tytul.trim() || "Zakupy", kategoria: "zakupy", termin, sklep: sklep.trim() || null, ...pola })
       .select(KOLUMNY_ZADAN)
       .single();
     setTrwa(false);
     if (error) return setBlad(tlumaczBlad(error.message));
     setListy((s) => [...s, data as unknown as Zadanie]);
     setTytul("Zakupy");
+    setSklep("");
+  }
+
+  async function ustawSklep(z: Zadanie, wartosc: string) {
+    const s = wartosc.trim() || null;
+    if (s === z.sklep) return;
+    setListy((l) => l.map((x) => (x.id === z.id ? { ...x, sklep: s } : x)));
+    const { error } = await supabase.from("zadania").update({ sklep: s }).eq("id", z.id);
+    if (error) {
+      setListy((l) => l.map((x) => (x.id === z.id ? z : x)));
+      setBlad(tlumaczBlad(error.message));
+    }
   }
 
   async function ustawStatus(z: Zadanie, status: Zadanie["status"]) {
@@ -112,6 +127,24 @@ export function Zakupy({ listy: l0, pozycje: p0, osoby, rodzinaId, mojeId, dzis 
           )}
         </div>
 
+        {zakonczona ? (
+          z.sklep && <p className="text-sm text-gray-500">Sklep: {z.sklep}</p>
+        ) : (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-500">Sklep:</span>
+            <Input
+              key={z.sklep ?? ""}
+              list="zk-sklepy"
+              className="h-9 w-56"
+              placeholder="gdzie robimy zakupy?"
+              defaultValue={z.sklep ?? ""}
+              onBlur={(e) => ustawSklep(z, e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), e.currentTarget.blur())}
+              aria-label="Sklep"
+            />
+          </div>
+        )}
+
         <ListaZakupow zadanieId={z.id} rodzinaId={rodzinaId} pozycje={lista} osoby={osoby} onZmiana={(l) => ustawPozycje(z.id, l)} />
 
         {!zakonczona && (
@@ -127,12 +160,21 @@ export function Zakupy({ listy: l0, pozycje: p0, osoby, rodzinaId, mojeId, dzis 
   return (
     <div className="space-y-4">
       {blad && <p className="text-sm text-red-600">{blad}</p>}
+      <datalist id="zk-sklepy">
+        {sklepy.map((s) => (
+          <option key={s} value={s} />
+        ))}
+      </datalist>
 
       <Card>
-        <form onSubmit={utworz} className="grid gap-3 sm:grid-cols-[1fr_9rem_11rem_auto] sm:items-end">
+        <form onSubmit={utworz} className="grid gap-3 sm:grid-cols-[1fr_9rem_9rem_11rem_auto] sm:items-end">
           <div className="space-y-1.5">
             <Label htmlFor="zk-tytul">Nowa lista zakupów</Label>
             <Input id="zk-tytul" value={tytul} onChange={(e) => setTytul(e.target.value)} placeholder="np. Zakupy na weekend" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="zk-sklep">Sklep</Label>
+            <Input id="zk-sklep" list="zk-sklepy" value={sklep} onChange={(e) => setSklep(e.target.value)} placeholder="np. Biedronka" />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="zk-data">Na dzień</Label>

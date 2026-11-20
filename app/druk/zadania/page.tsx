@@ -98,6 +98,7 @@ export default async function DrukZadan({ searchParams }: Props) {
               {typ && <span className="mr-1.5 rounded bg-gray-900 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">{typ}</span>}
               {z.przedmiot && <span className="text-gray-600">{z.przedmiot}: </span>}
               {z.tytul}
+              {z.kategoria === "zakupy" && z.sklep && <span className="text-gray-600"> · {z.sklep}</span>}
             </p>
             <p className="text-xs text-gray-600">
               {kiedy && `${kiedy}${krotkaGodzina(z.godz_koniec) ? `–${krotkaGodzina(z.godz_koniec)}` : ""}`}
