@@ -50,7 +50,7 @@ export default async function Pulpit({
     .from("zadania")
     .select(KOLUMNY_ZADAN)
     .or(
-      `and(status.eq.do_zrobienia,termin.lte.${jutro}),termin.in.(${dzis},${jutro}),and(termin.gte.${wybrany.start},termin.lte.${wybrany.koniec})`,
+      `and(status.eq.do_zrobienia,termin.lte.${jutro}),and(status.eq.do_zrobienia,na_dzien.lte.${dzis}),termin.in.(${dzis},${jutro}),and(termin.gte.${wybrany.start},termin.lte.${wybrany.koniec})`,
     )
     .order("termin");
   const zadania = (zad ?? []) as Zadanie[];

@@ -1,3 +1,5 @@
+import { dodajDni, dzienTygodnia } from "@/lib/dates";
+
 export type Typ = "zwykle" | "sprawdzian" | "kartkowka";
 export type Kategoria = "lekcje" | "do_szkoly" | "platnosc" | "transport" | "inne";
 export type Wykonawca = "dziecko" | "rodzic" | "oba";
@@ -17,6 +19,7 @@ export type Zadanie = {
   godz_koniec: string | null;
   przypisano_id: string | null;
   powtarzalne_id: string | null;
+  na_dzien: string | null; // kiedy zrobić (przed terminem); puste = domyślnie
 };
 
 export type OsobaMini = { id: string; imie: string; rola: "uczen" | "rodzic" };
@@ -30,7 +33,7 @@ export type Podzadanie = {
 };
 
 export const KOLUMNY_ZADAN =
-  "id, tytul, typ, termin, przedmiot, kategoria, wykonawca, opis, status, godz_start, godz_koniec, przypisano_id, powtarzalne_id";
+  "id, tytul, typ, termin, przedmiot, kategoria, wykonawca, opis, status, godz_start, godz_koniec, przypisano_id, powtarzalne_id, na_dzien";
 export const KOLUMNY_PODZADAN = "id, zadanie_id, tresc, kolejnosc, wykonane";
 
 export const TYPY: { wartosc: Typ; etykieta: string }[] = [
@@ -138,3 +141,19 @@ export function kolorOsoby(id: string | null, osoby: OsobaMini[]): string | null
   const i = osoby.findIndex((o) => o.id === id);
   return i < 0 ? null : KOLORY_OSOB[i % KOLORY_OSOB.length];
 }
+
+/**
+ * Dzień, od którego zadanie ma się pojawiać do zrobienia: wybrany ręcznie ("zrobię w sobotę")
+ * albo domyślnie dzień wcześniej dla terminu w poniedziałek (weekend też bywa dniem nauki).
+ */
+export function dzienRobienia(z: Pick<Zadanie, "termin" | "na_dzien" | "typ">): string {
+  if (z.na_dzien && z.na_dzien <= z.termin) return z.na_dzien;
+  if (z.typ === "zwykle" && dzienTygodnia(z.termin) === 1) return dodajDni(z.termin, -1);
+  return z.termin;
+}
+
+/** Dzień, w którym zadanie widać na liście: nie wcześniej niż dziś. */
+export const dzienWidoku = (z: Pick<Zadanie, "termin" | "na_dzien" | "typ">, dzis: string) => {
+  const d = dzienRobienia(z);
+  return d < dzis ? dzis : d;
+};

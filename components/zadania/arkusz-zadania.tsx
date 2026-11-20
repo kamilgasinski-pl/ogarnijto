@@ -70,6 +70,7 @@ export function ArkuszZadania({
       tytul: z.tytul.trim(),
       typ: z.typ,
       termin: z.termin,
+      na_dzien: z.na_dzien && z.na_dzien <= z.termin ? z.na_dzien : null,
       przedmiot: z.przedmiot?.trim() || null,
       kategoria: z.kategoria,
       opis: z.opis?.trim() || null,
@@ -184,6 +185,17 @@ export function ArkuszZadania({
           <div className="space-y-1.5">
             <Label htmlFor="termin">Termin</Label>
             <Input id="termin" type="date" required value={z.termin} onChange={(e) => setZ({ ...z, termin: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="na_dzien">Zrobię w dniu (opcjonalnie)</Label>
+            <Input
+              id="na_dzien"
+              type="date"
+              max={z.termin}
+              value={z.na_dzien ?? ""}
+              onChange={(e) => setZ({ ...z, na_dzien: e.target.value || null })}
+            />
+            <p className="text-xs text-gray-500">Np. sobota. Puste: zadanie na poniedziałek pokaże się już w niedzielę.</p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="przedmiot">Przedmiot</Label>

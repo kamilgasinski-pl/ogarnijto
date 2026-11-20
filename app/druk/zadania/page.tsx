@@ -6,6 +6,7 @@ import { KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, wystapienia, type Dojazd, type Wyja
 import { naCzas } from "@/lib/plan";
 import {
   jestMoje,
+  dzienWidoku,
   jestZalegle,
   krotkaGodzina,
   KOLUMNY_PODZADAN,
@@ -43,9 +44,10 @@ export default async function DrukZadan({ searchParams }: Props) {
     .from("zadania")
     .select(KOLUMNY_ZADAN)
     .eq("status", "do_zrobienia")
-    .lte("termin", koniecEfektywny)
+    .lte("termin", dodajDni(koniecEfektywny, 1))
     .order("termin");
   const zadania = ((zad ?? []) as Zadanie[])
+    .filter((z) => jestZalegle(z, dzis) || dzienWidoku(z, dzis) <= koniecEfektywny)
     .filter((z) => !wybrana || jestMoje(z, wybrana.id, wybrana.rola))
     .sort((a, b) => (a.godz_start ?? "99").localeCompare(b.godz_start ?? "99") || a.tytul.localeCompare(b.tytul, "pl"));
 
@@ -149,7 +151,7 @@ export default async function DrukZadan({ searchParams }: Props) {
           </section>
         )}
         {dni.map((d) => {
-          const lista = zadania.filter((z) => z.termin === d && !jestZalegle(z, dzis));
+          const lista = zadania.filter((z) => dzienWidoku(z, dzis) === d && !jestZalegle(z, dzis));
           const doj = dojazdy.filter((w) => w.data === d);
           if (lista.length === 0 && doj.length === 0 && dni.length > 1) return null;
           return (

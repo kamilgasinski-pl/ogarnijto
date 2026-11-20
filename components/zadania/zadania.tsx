@@ -15,6 +15,7 @@ import {
   KOLUMNY_ZADAN,
   jestMoje,
   jestZalegle,
+  dzienWidoku,
   krotkaGodzina,
   kolorOsoby, KOLORY_OSOB, nazwaWykonawcy,
   polaWykonawcy,
@@ -401,8 +402,11 @@ export function Zadania({
 
   let tresc: React.ReactNode;
   if (widok === "pulpit") {
-    const dzisL = lista0.filter((z) => z.termin === dzis && !jestZalegle(z, dzis)).sort(sortuj);
-    const jutroL = lista0.filter((z) => z.termin === jutro).sort(sortuj);
+    // Do zrobienia dziś: termin dziś albo zadanie z późniejszym terminem, które wypada zrobić już dziś
+    // (np. na poniedziałek w niedzielę albo w dniu wybranym przez dziecko).
+    const naDzis = (z: Zadanie) => !jestZalegle(z, dzis) && z.termin >= dzis && dzienWidoku(z, dzis) === dzis;
+    const dzisL = lista0.filter(naDzis).sort(sortuj);
+    const jutroL = lista0.filter((z) => z.termin === jutro && !naDzis(z)).sort(sortuj);
     tresc = (
       <>
         {zalegle.length > 0 && sekcja("Zaległe", zalegle)}
@@ -606,6 +610,7 @@ function Wiersz({
           {z.powtarzalne_id && <Repeat size={12} aria-label="Powtarza się" />}
           {z.przedmiot && <span>{z.przedmiot}</span>}
           {zalegle && <span className="text-red-600">z {dzienMiesiac(z.termin)}</span>}
+          {!zalegle && z.termin > dzis && <span className="font-medium text-amber-700">termin: {etykietaDnia(z.termin, dzis)}</span>}
           {wykonawca && (kolor ? <Znacznik kolor={kolor} imie={wykonawca} /> : <span>· {wykonawca}</span>)}
           {podzadania.length > 0 && (
             <span className="flex items-center gap-1">
