@@ -345,9 +345,11 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                             e.stopPropagation();
                             setSzkic({ ...b });
                           }}
-                          className="absolute right-1 top-1 flex items-center gap-1 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-medium text-gray-800 shadow-sm ring-1 ring-gray-300 hover:bg-white"
+                          aria-label="Edytuj lekcję"
+                          title="Edytuj"
+                          className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-sm ring-1 ring-gray-300 hover:bg-white"
                         >
-                          <Pencil size={11} /> Edytuj
+                          <Pencil size={14} />
                         </button>
                       </div>
                     );
@@ -360,7 +362,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
       </div>
 
       <p className="text-xs text-gray-500">
-        Dotknij pustego miejsca, by dodać lekcję. Aby zmienić lekcję, użyj przycisku „Edytuj” w jej bloku.
+        Dotknij pustego miejsca, by dodać lekcję. Aby zmienić lekcję, użyj ołówka w jej bloku.
       </p>
 
       {jestTydzien && (
