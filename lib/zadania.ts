@@ -22,6 +22,8 @@ export type Zadanie = {
   powtarzalne_id: string | null;
   na_dzien: string | null; // kiedy zrobić (przed terminem); puste = domyślnie
   sklep: string | null; // zakupy: nazwa sklepu
+  pokaz_na_pulpicie: boolean; // pokazuj w najbliższych sprawdzianach na pulpicie
+  oznacz_na_planerze: boolean; // oznacz przedmiot wykrzyknikiem na planerze
 };
 
 export type OsobaMini = { id: string; imie: string; rola: "uczen" | "rodzic" };
@@ -38,7 +40,7 @@ export type Podzadanie = {
 };
 
 export const KOLUMNY_ZADAN =
-  "id, tytul, typ, termin, przedmiot, kategoria, wykonawca, opis, status, godz_start, godz_koniec, przypisano_id, powtarzalne_id, na_dzien, sklep";
+  "id, tytul, typ, termin, przedmiot, kategoria, wykonawca, opis, status, godz_start, godz_koniec, przypisano_id, powtarzalne_id, na_dzien, sklep, pokaz_na_pulpicie, oznacz_na_planerze";
 export const KOLUMNY_PODZADAN = "id, zadanie_id, tresc, kolejnosc, wykonane, ilosc, dodal, notatka";
 
 export const TYPY: { wartosc: Typ; etykieta: string }[] = [

@@ -138,25 +138,16 @@ export default async function Pulpit({
 
   // Najbliższe sprawdziany, kartkówki i odpowiedzi (60 dni do przodu) wraz z postępem nauki (umiem x/y).
   const sprawdziany = async () => {
-    const zapytanie = () =>
-      supabase
-        .from("zadania")
-        .select(KOLUMNY_ZADAN)
-        .eq("status", "do_zrobienia")
-        .gte("termin", dzis)
-        .lte("termin", dodajDni(dzis, 60))
-        .order("termin")
-        .limit(8);
-    // Własne kategorie, które rodzina oznaczyła jako "pokazuj w najbliższych sprawdzianach".
-    const { data: wlasne } = await supabase.from("kategorie_wlasne").select("nazwa").eq("na_pulpicie", true);
-    const nazwy = (wlasne ?? []).map((k) => k.nazwa as string);
-    const [{ data: testyDb }, { data: wlasneDb }] = await Promise.all([
-      zapytanie().in("typ", ["sprawdzian", "kartkowka", "odpowiedz"]),
-      nazwy.length > 0 ? zapytanie().in("kategoria", nazwy) : Promise.resolve({ data: [] as Zadanie[] }),
-    ]);
-    const scalone = new Map<string, Zadanie>();
-    for (const z of [...(testyDb ?? []), ...(wlasneDb ?? [])] as Zadanie[]) scalone.set(z.id, z);
-    const nadchodzace = [...scalone.values()].sort((a, b) => a.termin.localeCompare(b.termin)).slice(0, 8);
+    const { data: testyDb } = await supabase
+      .from("zadania")
+      .select(KOLUMNY_ZADAN)
+      .eq("pokaz_na_pulpicie", true)
+      .eq("status", "do_zrobienia")
+      .gte("termin", dzis)
+      .lte("termin", dodajDni(dzis, 60))
+      .order("termin")
+      .limit(8);
+    const nadchodzace = (testyDb ?? []) as Zadanie[];
     const postep = new Map<string, { ok: number; razem: number }>();
     if (nadchodzace.length > 0) {
       const { data } = await supabase

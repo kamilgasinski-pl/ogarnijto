@@ -74,6 +74,8 @@ export function ArkuszZadania({
       na_dzien: z.na_dzien && z.na_dzien <= z.termin ? z.na_dzien : null,
       sklep: z.kategoria === "zakupy" ? z.sklep?.trim() || null : null,
       przedmiot: z.przedmiot?.trim() || null,
+      pokaz_na_pulpicie: z.pokaz_na_pulpicie,
+      oznacz_na_planerze: z.oznacz_na_planerze,
       kategoria: z.kategoria,
       opis: z.opis?.trim() || null,
       godz_start: od || null,
@@ -201,8 +203,22 @@ export function ArkuszZadania({
               id="kategoria"
               wartosc={z.kategoria}
               rodzinaId={rodzinaId}
-              onZmien={(k) => setZ({ ...z, kategoria: k, typ: typDlaKategorii(k) })}
+              onZmien={(k) => {
+                const jestTest = typDlaKategorii(k) !== "zwykle";
+                // Wybór sprawdzianu, kartkówki lub odp. ustnej od razu włącza obie opcje widoczności.
+                setZ({ ...z, kategoria: k, typ: typDlaKategorii(k), ...(jestTest ? { pokaz_na_pulpicie: true, oznacz_na_planerze: true } : {}) });
+              }}
             />
+          </div>
+          <div className="col-span-2 space-y-1.5 rounded-lg border border-gray-200 bg-gray-50 p-2.5">
+            <label className="flex items-start gap-2 text-sm text-gray-700">
+              <input type="checkbox" className="mt-0.5" checked={z.pokaz_na_pulpicie} onChange={(e) => setZ({ ...z, pokaz_na_pulpicie: e.target.checked })} />
+              Pokazuj na pulpicie w „Najbliższych sprawdzianach i kartkówkach”
+            </label>
+            <label className="flex items-start gap-2 text-sm text-gray-700">
+              <input type="checkbox" className="mt-0.5" checked={z.oznacz_na_planerze} onChange={(e) => setZ({ ...z, oznacz_na_planerze: e.target.checked })} />
+              Oznacz przedmiot wykrzyknikiem na planerze w dniu terminu
+            </label>
           </div>
           <div className="col-span-2 space-y-1.5">
             <Label htmlFor="osoba">Kto ma to zrobić</Label>

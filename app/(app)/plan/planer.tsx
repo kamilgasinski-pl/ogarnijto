@@ -36,6 +36,18 @@ export type TestNaPlanie = { termin: string; etykieta: string; przedmiot: string
 
 const norm = (t: string | null | undefined) => (t ?? "").trim().toLowerCase();
 
+/** Czy zadanie dotyczy przedmiotu: dokładna nazwa albo słowa kluczowe (np. „z niemieckiego” → Język Niemiecki). */
+function dotyczyPrzedmiotu(t: TestNaPlanie, nazwa: string): boolean {
+  if (norm(t.przedmiot) === nazwa) return true;
+  const tekst = norm(t.przedmiot) || norm(t.tytul);
+  const slowa = nazwa.split(/\s+/).filter((s) => s !== "język" && s !== "jezyk" && s.length >= 2);
+  if (slowa.length === 0) return tekst.includes(nazwa);
+  return slowa.every((s) => {
+    const rdzen = s.length > 5 ? s.slice(0, 5) : s;
+    return tekst.split(/[^\p{L}\d]+/u).some((w) => (s.length <= 3 ? w === s : w.startsWith(rdzen)));
+  });
+}
+
 type Props = {
   tryb: "tydzien" | "szablon";
   tydzien: string;
@@ -328,7 +340,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                     const dataBloku = jestTydzien ? dodajDni(tydzien, b.dzien - 1) : null;
                     const nazwaPrzedmiotu = norm(p?.nazwa);
                     const test = dataBloku && nazwaPrzedmiotu
-                      ? testy.find((t) => t.termin === dataBloku && (norm(t.przedmiot) ? norm(t.przedmiot) === nazwaPrzedmiotu : norm(t.tytul).includes(nazwaPrzedmiotu)))
+                      ? testy.find((t) => t.termin === dataBloku && dotyczyPrzedmiotu(t, nazwaPrzedmiotu))
                       : undefined;
                     return (
                       <div
