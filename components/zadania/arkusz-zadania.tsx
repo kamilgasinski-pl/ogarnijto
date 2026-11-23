@@ -213,7 +213,7 @@ export function ArkuszZadania({
           <div className="col-span-2 space-y-1.5 rounded-lg border border-gray-200 bg-gray-50 p-2.5">
             <label className="flex items-start gap-2 text-sm text-gray-700">
               <input type="checkbox" className="mt-0.5" checked={z.pokaz_na_pulpicie} onChange={(e) => setZ({ ...z, pokaz_na_pulpicie: e.target.checked })} />
-              Pokazuj na pulpicie w „Najbliższych sprawdzianach i kartkówkach”
+              Pokazuj na pulpicie w „Pilnych zadaniach”
             </label>
             <label className="flex items-start gap-2 text-sm text-gray-700">
               <input type="checkbox" className="mt-0.5" checked={z.oznacz_na_planerze} onChange={(e) => setZ({ ...z, oznacz_na_planerze: e.target.checked })} />

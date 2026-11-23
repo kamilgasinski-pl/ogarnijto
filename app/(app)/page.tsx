@@ -230,9 +230,9 @@ export default async function Pulpit({
       <div className="grid gap-6 md:grid-cols-3">
         <div className="space-y-6 md:col-span-2">
         <Card className="h-fit space-y-3">
-          <CardTitle>Najbliższe sprawdziany i kartkówki</CardTitle>
+          <CardTitle>Pilne zadania</CardTitle>
           {nadchodzace.length === 0 ? (
-            <p className="text-sm text-gray-500">Brak zapowiedzianych sprawdzianów.</p>
+            <p className="text-sm text-gray-500">Brak pilnych zadań.</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {nadchodzace.map((z) => {
