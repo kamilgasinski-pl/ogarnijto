@@ -8,17 +8,16 @@ import { Button } from "@/components/ui/button";
 import { ListaZakupow } from "@/components/zakupy/lista-zakupow";
 import { Czas } from "@/components/ui/czas";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
+import { WyborKategorii } from "@/components/zadania/wybor-kategorii";
 import {
-  KATEGORIE,
   KOLUMNY_PODZADAN,
-  TYPY,
+  kategoriaZadania,
+  typDlaKategorii,
   krotkaGodzina,
   polaWykonawcy,
   wartoscOsoby,
-  type Kategoria,
   type OsobaMini,
   type Podzadanie,
-  type Typ,
   type Zadanie,
 } from "@/lib/zadania";
 
@@ -44,7 +43,7 @@ export function ArkuszZadania({
   onZamknij,
 }: Props) {
   const [supabase] = useState(() => createClient());
-  const [z, setZ] = useState(zadanie);
+  const [z, setZ] = useState<Zadanie>(() => ({ ...zadanie, kategoria: kategoriaZadania(zadanie) }));
   const [od, setOd] = useState(krotkaGodzina(zadanie.godz_start) ?? "");
   const [do_, setDo] = useState(krotkaGodzina(zadanie.godz_koniec) ?? "");
   const [osoba, setOsoba] = useState(wartoscOsoby(zadanie));
@@ -53,7 +52,7 @@ export function ArkuszZadania({
   const [blad, setBlad] = useState<string | null>(null);
   const [trwa, setTrwa] = useState(false);
 
-  const test = z.typ !== "zwykle";
+  const test = typDlaKategorii(z.kategoria) !== "zwykle";
   const umiem = lista.filter((p) => p.wykonane).length;
 
   function zmienListe(l: Podzadanie[]) {
@@ -70,7 +69,7 @@ export function ArkuszZadania({
     const wykonawca = polaWykonawcy(osoba, osoby);
     const pola = {
       tytul: z.tytul.trim(),
-      typ: z.typ,
+      typ: typDlaKategorii(z.kategoria),
       termin: z.termin,
       na_dzien: z.na_dzien && z.na_dzien <= z.termin ? z.na_dzien : null,
       sklep: z.kategoria === "zakupy" ? z.sklep?.trim() || null : null,
@@ -178,14 +177,6 @@ export function ArkuszZadania({
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="typ">Rodzaj</Label>
-            <Select id="typ" value={z.typ} onChange={(e) => setZ({ ...z, typ: e.target.value as Typ })}>
-              {TYPY.map((t) => (
-                <option key={t.wartosc} value={t.wartosc}>{t.etykieta}</option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-1.5">
             <Label htmlFor="termin">Termin</Label>
             <Input id="termin" type="date" required value={z.termin} onChange={(e) => setZ({ ...z, termin: e.target.value })} />
           </div>
@@ -204,13 +195,14 @@ export function ArkuszZadania({
             <Label htmlFor="przedmiot">Przedmiot</Label>
             <Input id="przedmiot" value={z.przedmiot ?? ""} onChange={(e) => setZ({ ...z, przedmiot: e.target.value })} />
           </div>
-          <div className="space-y-1.5">
+          <div className="col-span-2 space-y-1.5">
             <Label htmlFor="kategoria">Kategoria</Label>
-            <Select id="kategoria" value={z.kategoria} onChange={(e) => setZ({ ...z, kategoria: e.target.value as Kategoria })}>
-              {KATEGORIE.map((k) => (
-                <option key={k.wartosc} value={k.wartosc}>{k.etykieta}</option>
-              ))}
-            </Select>
+            <WyborKategorii
+              id="kategoria"
+              wartosc={z.kategoria}
+              rodzinaId={rodzinaId}
+              onZmien={(k) => setZ({ ...z, kategoria: k, typ: typDlaKategorii(k) })}
+            />
           </div>
           <div className="col-span-2 space-y-1.5">
             <Label htmlFor="osoba">Kto ma to zrobić</Label>

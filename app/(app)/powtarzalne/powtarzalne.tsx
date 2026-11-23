@@ -8,10 +8,10 @@ import { tlumaczBlad } from "@/lib/bledy";
 import { dzienMiesiac, dzienTygodnia } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import { Czas } from "@/components/ui/czas";
+import { WyborKategorii } from "@/components/zadania/wybor-kategorii";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import {
   DNI_KROTKO,
-  KATEGORIE,
   krotkaGodzina,
   nazwaWykonawcy,
   opisDni,
@@ -300,11 +300,7 @@ export function Powtarzalne({ reguly, osoby, rodzinaId, mojeId, dzis }: Props) {
               </div>
               <div className="col-span-2 space-y-1.5">
                 <Label htmlFor="kategoria">Kategoria</Label>
-                <Select id="kategoria" value={szkic.kategoria} onChange={(e) => setSzkic({ ...szkic, kategoria: e.target.value as Kategoria })}>
-                  {KATEGORIE.map((k) => (
-                    <option key={k.wartosc} value={k.wartosc}>{k.etykieta}</option>
-                  ))}
-                </Select>
+                <WyborKategorii id="kategoria" zTestami={false} rodzinaId={rodzinaId} wartosc={szkic.kategoria} onZmien={(k) => setSzkic({ ...szkic, kategoria: k })} />
               </div>
             </div>
 

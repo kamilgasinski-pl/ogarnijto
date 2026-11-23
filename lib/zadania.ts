@@ -1,7 +1,8 @@
 import { dodajDni, dzienTygodnia } from "@/lib/dates";
 
-export type Typ = "zwykle" | "sprawdzian" | "kartkowka";
-export type Kategoria = "lekcje" | "do_szkoly" | "platnosc" | "transport" | "inne" | "zakupy";
+export type Typ = "zwykle" | "sprawdzian" | "kartkowka" | "odpowiedz";
+/** Wbudowane kategorie mają stałe klucze; własne kategorie rodziny to po prostu ich nazwa. */
+export type Kategoria = string;
 export type Wykonawca = "dziecko" | "rodzic" | "oba";
 export type StatusZadania = "do_zrobienia" | "zrobione";
 
@@ -44,7 +45,24 @@ export const TYPY: { wartosc: Typ; etykieta: string }[] = [
   { wartosc: "zwykle", etykieta: "Zwykłe zadanie" },
   { wartosc: "sprawdzian", etykieta: "Sprawdzian" },
   { wartosc: "kartkowka", etykieta: "Kartkówka" },
+  { wartosc: "odpowiedz", etykieta: "Odp. ustna" },
 ];
+
+export function etykietaTypu(typ: Typ): string {
+  return TYPY.find((t) => t.wartosc === typ)?.etykieta ?? "";
+}
+
+/** Kategorie, które jednocześnie ustawiają rodzaj zadania (sprawdzian, kartkówka, odp. ustna). */
+export const KATEGORIE_TESTOW: Kategoria[] = ["sprawdzian", "kartkowka", "odpowiedz"];
+
+export function typDlaKategorii(k: Kategoria): Typ {
+  return KATEGORIE_TESTOW.includes(k) ? (k as Typ) : "zwykle";
+}
+
+/** Kategoria widoczna w formularzu: dla sprawdzianów itp. wynika z rodzaju zadania. */
+export function kategoriaZadania(z: Pick<Zadanie, "typ" | "kategoria">): Kategoria {
+  return z.typ !== "zwykle" ? z.typ : z.kategoria;
+}
 
 export const KATEGORIE: { wartosc: Kategoria; etykieta: string }[] = [
   { wartosc: "lekcje", etykieta: "Lekcje" },
@@ -54,6 +72,15 @@ export const KATEGORIE: { wartosc: Kategoria; etykieta: string }[] = [
   { wartosc: "zakupy", etykieta: "Zakupy" },
   { wartosc: "inne", etykieta: "Inne" },
 ];
+
+export const KATEGORIE_Z_TESTAMI: { wartosc: Kategoria; etykieta: string }[] = [
+  ...TYPY.filter((t) => t.wartosc !== "zwykle"),
+  ...KATEGORIE,
+];
+
+export function etykietaKategorii(k: Kategoria): string {
+  return KATEGORIE_Z_TESTAMI.find((x) => x.wartosc === k)?.etykieta ?? k;
+}
 
 export const WYKONAWCY: { wartosc: Wykonawca; etykieta: string }[] = [
   { wartosc: "dziecko", etykieta: "Dziecko" },

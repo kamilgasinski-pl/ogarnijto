@@ -27,6 +27,7 @@ import {
   type Podzadanie,
   type Wykonawca,
   type Zadanie,
+  etykietaTypu,
 } from "@/lib/zadania";
 import { ArkuszZadania } from "./arkusz-zadania";
 
@@ -704,7 +705,7 @@ function Wiersz({
         <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500">
           {test && (
             <span className="rounded bg-amber-100 px-1.5 text-amber-800">
-              {z.typ === "sprawdzian" ? "Sprawdzian" : "Kartkówka"}
+              {etykietaTypu(z.typ)}
             </span>
           )}
           {od && (

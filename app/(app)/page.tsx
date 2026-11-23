@@ -23,6 +23,7 @@ import {
   type Podzadanie,
   type Wykonawca,
   type Zadanie,
+  etykietaTypu,
 } from "@/lib/zadania";
 
 export default async function Pulpit({
@@ -135,12 +136,12 @@ export default async function Pulpit({
       supabase.from("dojazdy_wyjatki").select(KOLUMNY_WYJATKOW).gte("data", odDoj).lte("data", doDoj),
     ]);
 
-  // Najbliższe sprawdziany i kartkówki (60 dni do przodu) wraz z postępem nauki (umiem x/y).
+  // Najbliższe sprawdziany, kartkówki i odpowiedzi (60 dni do przodu) wraz z postępem nauki (umiem x/y).
   const sprawdziany = async () => {
     const { data: testyDb } = await supabase
       .from("zadania")
       .select(KOLUMNY_ZADAN)
-      .in("typ", ["sprawdzian", "kartkowka"])
+      .in("typ", ["sprawdzian", "kartkowka", "odpowiedz"])
       .eq("status", "do_zrobienia")
       .gte("termin", dzis)
       .lte("termin", dodajDni(dzis, 60))
@@ -272,7 +273,7 @@ export default async function Pulpit({
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-medium text-gray-900">
                         <span className="mr-1.5 rounded bg-amber-100 px-1.5 text-xs font-normal text-amber-800">
-                          {z.typ === "sprawdzian" ? "Sprawdzian" : "Kartkówka"}
+                          {etykietaTypu(z.typ)}
                         </span>
                         {z.przedmiot ?? z.tytul}
                       </p>

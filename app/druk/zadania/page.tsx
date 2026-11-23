@@ -14,6 +14,7 @@ import {
   type OsobaMini,
   type Podzadanie,
   type Zadanie,
+  etykietaTypu,
 } from "@/lib/zadania";
 import { PrzyciskDruku } from "./przycisk-druku";
 
@@ -86,7 +87,7 @@ export default async function DrukZadan({ searchParams }: Props) {
 
   function blok(z: Zadanie) {
     const pod = podzadania.filter((p) => p.zadanie_id === z.id);
-    const typ = z.typ === "sprawdzian" ? "Sprawdzian" : z.typ === "kartkowka" ? "Kartkówka" : null;
+    const typ = z.typ !== "zwykle" ? etykietaTypu(z.typ) : null;
     const kiedy = krotkaGodzina(z.godz_start);
     const kogo = z.przypisano_id ? osoby.find((o) => o.id === z.przypisano_id)?.imie : null;
     return (
