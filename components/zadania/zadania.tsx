@@ -513,7 +513,7 @@ export function Zadania({
           klucz={`ogarnijto.nagroda.${mojeId}`}
           dzis={dzis}
         />
-        {sekcja("Dziś", dzisL, "Nic na dziś. Można odpocząć albo dodać zadanie.", undefined, dojazdyDnia(dzis))}
+        {sekcja("Dziś", dzisL, "Nic na dziś. Można odpocząć albo dodać zadanie.")}
         {sekcja(
           etykietaDnia(jutro, dzis),
           jutroL,
@@ -523,7 +523,6 @@ export function Zadania({
               + {liczba(weekendLiczba)} w weekend
             </Link>
           ),
-          dojazdyDnia(jutro),
         )}
         {tydzien && widokTygodnia(tydzien)}
       </>
