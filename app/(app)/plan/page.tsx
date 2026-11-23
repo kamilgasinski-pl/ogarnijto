@@ -16,6 +16,7 @@ import {
 } from "@/lib/plan";
 import { KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, koniecNaPlanie, wystapienia, type Dojazd, type Wyjatek } from "@/lib/dojazdy";
 import { Planer } from "./planer";
+import { PrzyciskScreenPlanu } from "./przycisk-screen";
 
 type Props = {
   searchParams: Promise<{ tydzien?: string; widok?: string }>;
@@ -99,13 +100,12 @@ export default async function PlanPage({ searchParams }: Props) {
             <Link href={`/plan?tydzien=${nastepny}`} className={nawig} aria-label="Następny tydzień">→</Link>
           </div>
         )}
-        <Link
-          href={`/druk/plan?${szablon ? "widok=szablon" : `tydzien=${tydzien}`}`}
-          target="_blank"
-          className={`${nawig} ml-auto`}
-        >
-          Drukuj / PDF
-        </Link>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <PrzyciskScreenPlanu tydzien={szablon ? "szablon" : tydzien} klasa={nawig} />
+          <Link href={`/druk/plan?${szablon ? "widok=szablon" : `tydzien=${tydzien}`}`} target="_blank" className={nawig}>
+            Drukuj / PDF
+          </Link>
+        </div>
       </div>
 
       <Planer

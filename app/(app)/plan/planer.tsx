@@ -208,10 +208,16 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
         ))}
       </div>
 
-      <div className="flex overflow-x-auto rounded-xl border border-gray-200 bg-white">
+      <div id="planer-zdjecie" className="group/z bg-white">
+        <p className="hidden px-2 pb-1 pt-2 text-base font-semibold text-gray-900 group-data-[zdjecie]/z:block">
+          {jestTydzien
+            ? `Plan zajęć · ${dzienMiesiac(tydzien)}–${dzienMiesiac(dodajDni(tydzien, 6))}`
+            : "Plan zajęć · szablon tygodnia"}
+        </p>
+      <div className="flex overflow-x-auto rounded-xl border border-gray-200 bg-white group-data-[zdjecie]/z:w-max group-data-[zdjecie]/z:min-w-[980px] group-data-[zdjecie]/z:overflow-visible">
         {/* oś godzin */}
         <div className="w-10 shrink-0 border-r border-gray-100 md:w-12">
-          <div className="hidden h-9 md:block" />
+          <div className="hidden h-9 group-data-[zdjecie]/z:block! md:block" />
           <div className="relative" style={{ height: wysokosc }}>
             {godziny.map((m) => (
               <span
@@ -230,9 +236,9 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
           return (
             <div
               key={n}
-              className={`${dzien === n ? "block" : "hidden"} min-w-0 flex-1 border-r border-gray-100 last:border-r-0 md:block md:min-w-[8.5rem]`}
+              className={`${dzien === n ? "block" : "hidden"} group-data-[zdjecie]/z:block! min-w-0 flex-1 border-r border-gray-100 last:border-r-0 md:block md:min-w-[8.5rem]`}
             >
-              <div className={`hidden h-9 items-center justify-center text-sm font-medium md:flex ${data === dzis ? "text-gray-900 underline" : "text-gray-600"}`}>
+              <div className={`hidden h-9 items-center justify-center text-sm font-medium group-data-[zdjecie]/z:flex! md:flex ${data === dzis ? "text-gray-900 underline" : "text-gray-600"}`}>
                 {DNI[n - 1]}
                 {data && <span className="ml-1 text-xs font-normal text-gray-400">{dzienMiesiac(data)}</span>}
               </div>
@@ -334,6 +340,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                         </div>
                         <button
                           type="button"
+                          data-bez-zdjecia
                           onClick={(e) => {
                             e.stopPropagation();
                             setSzkic({ ...b });
@@ -349,6 +356,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
             </div>
           );
         })}
+      </div>
       </div>
 
       <p className="text-xs text-gray-500">
