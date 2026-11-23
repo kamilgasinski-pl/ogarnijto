@@ -61,6 +61,7 @@ export default async function DrukPlanu({ searchParams }: Props) {
   const godziny: number[] = [];
   for (let m = od; m <= do_; m += 60) godziny.push(m);
 
+  // Weekend na wydruku tylko, gdy coś w nim zaplanowano.
   const dni = [1, 2, 3, 4, 5];
   if (bloki.some((b) => b.dzien === 6) || dojazdy.some((d) => d.dzien === 6)) dni.push(6);
   if (bloki.some((b) => b.dzien === 7) || dojazdy.some((d) => d.dzien === 7)) dni.push(7);

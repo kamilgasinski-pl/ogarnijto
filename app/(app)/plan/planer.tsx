@@ -65,10 +65,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
   const [supabase] = useState(() => createClient());
   const [przedmioty, setPrzedmioty] = useState(p0);
   const [bloki, setBloki] = useState<Blok[]>(() => b0.map(zWiersza));
-  const [dzien, setDzien] = useState(() => {
-    const d = dzienTygodnia(dzis);
-    return d <= 5 ? d : 1;
-  });
+  const [dzien, setDzien] = useState(() => dzienTygodnia(dzis));
   const [szkic, setSzkic] = useState<Szkic | null>(null);
   const [podglad, setPodglad] = useState<Podglad | null>(null);
   const [blad, setBlad] = useState<string | null>(null);
@@ -88,9 +85,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
   const godziny: number[] = [];
   for (let m = godzOd; m <= godzDo; m += 60) godziny.push(m);
 
-  const dni = [1, 2, 3, 4, 5];
-  if (bloki.some((b) => b.dzien === 6) || dojazdy.some((d) => d.dzien === 6)) dni.push(6);
-  if (bloki.some((b) => b.dzien === 7) || dojazdy.some((d) => d.dzien === 7)) dni.push(7);
+  const dni = [1, 2, 3, 4, 5, 6, 7]; // cały tydzień; weekend można planować tak samo jak dni szkolne
 
   const przedmiotPo = (id: string | null) => przedmioty.find((p) => p.id === id);
 
@@ -330,7 +325,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
           <button
             key={n}
             onClick={() => setDzien(n)}
-            className={`flex-1 rounded-full py-1.5 text-sm ${dzien === n ? "bg-gray-900 text-white" : "bg-gray-200 text-gray-700"}`}
+            className={`flex-1 rounded-full py-1.5 text-sm ${dzien === n ? "bg-gray-900 text-white" : n >= 6 ? "bg-indigo-100 text-indigo-800" : "bg-gray-200 text-gray-700"}`}
           >
             {DNI_KROTKO[n - 1]}
             {jestTydzien && (
@@ -340,7 +335,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
         ))}
       </div>
 
-      <div className="flex overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="flex overflow-x-auto rounded-xl border border-gray-200 bg-white">
         {/* oś godzin */}
         <div className="w-10 shrink-0 border-r border-gray-100 md:w-12">
           <div className="hidden h-9 md:block" />
@@ -362,9 +357,9 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
           return (
             <div
               key={n}
-              className={`${dzien === n ? "block" : "hidden"} min-w-0 flex-1 border-r border-gray-100 last:border-r-0 md:block`}
+              className={`${dzien === n ? "block" : "hidden"} min-w-0 flex-1 border-r border-gray-100 last:border-r-0 md:block md:min-w-[8.5rem] ${n >= 6 ? "bg-indigo-50/60" : ""}`}
             >
-              <div className={`hidden h-9 items-center justify-center text-sm font-medium md:flex ${data === dzis ? "text-gray-900 underline" : "text-gray-600"}`}>
+              <div className={`hidden h-9 items-center justify-center text-sm font-medium md:flex ${n >= 6 ? "bg-indigo-100/80 text-indigo-800" : "text-gray-600"} ${data === dzis ? "underline" : ""}`}>
                 {DNI[n - 1]}
                 {data && <span className="ml-1 text-xs font-normal text-gray-400">{dzienMiesiac(data)}</span>}
               </div>
