@@ -228,30 +228,7 @@ export default async function Pulpit({
         </p>
       </div>
       <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <Zadania
-            key={wybrany.start}
-            zadania={zadania}
-            podzadania={podzadania}
-            rodzinaId={osoba.rodzina_id}
-            osoby={(osobyDb ?? []) as OsobaMini[]}
-            mojeId={osoba.id}
-            rola={osoba.rola}
-            dzis={dzis}
-            jutro={jutro}
-            widok="pulpit"
-            weekend={weekend}
-            dojazdy={dojazdy}
-            tydzien={{ ...wybrany, biezacy: wybrany.start === tydzien.start }}
-          />
-        </div>
-        <div className="space-y-6">
-        <PlanDnia
-          tytul={dzienNr <= 5 ? "Plan na dziś" : "Weekend"}
-          data={dataSlownie(dzis)}
-          pozycje={pozycjeDnia}
-          pusto={dzienNr > 5 ? "Dziś bez lekcji." : "Brak lekcji w planie."}
-        />
+        <div className="space-y-6 md:col-span-2">
         <Card className="h-fit space-y-3">
           <CardTitle>Najbliższe sprawdziany i kartkówki</CardTitle>
           {nadchodzace.length === 0 ? (
@@ -293,6 +270,29 @@ export default async function Pulpit({
             </ul>
           )}
         </Card>
+          <Zadania
+            key={wybrany.start}
+            zadania={zadania}
+            podzadania={podzadania}
+            rodzinaId={osoba.rodzina_id}
+            osoby={(osobyDb ?? []) as OsobaMini[]}
+            mojeId={osoba.id}
+            rola={osoba.rola}
+            dzis={dzis}
+            jutro={jutro}
+            widok="pulpit"
+            weekend={weekend}
+            dojazdy={dojazdy}
+            tydzien={{ ...wybrany, biezacy: wybrany.start === tydzien.start }}
+          />
+        </div>
+        <div className="space-y-6">
+        <PlanDnia
+          tytul={dzienNr <= 5 ? "Plan na dziś" : "Weekend"}
+          data={dataSlownie(dzis)}
+          pozycje={pozycjeDnia}
+          pusto={dzienNr > 5 ? "Dziś bez lekcji." : "Brak lekcji w planie."}
+        />
         </div>
       </div>
     </div>
