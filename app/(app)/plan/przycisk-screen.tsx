@@ -14,6 +14,7 @@ export function PrzyciskScreenPlanu({ tydzien, klasa }: { tydzien: string; klasa
     setStan("trwa");
     // Na czas zdjęcia pokazujemy wszystkie dni obok siebie (na telefonie widać normalnie jeden).
     el.dataset.zdjecie = "1";
+    el.style.width = "1280px"; // stała szerokość: zdjęcie bez pustego pola, taka sama na każdym urządzeniu
     try {
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       setStan(await kopiujObraz(el, `plan-tygodnia-${tydzien}.png`, "Plan zajęć"));
@@ -21,6 +22,7 @@ export function PrzyciskScreenPlanu({ tydzien, klasa }: { tydzien: string; klasa
       setStan("blad");
     } finally {
       delete el.dataset.zdjecie;
+      el.style.width = "";
     }
     setTimeout(() => setStan(""), 3500);
   }
