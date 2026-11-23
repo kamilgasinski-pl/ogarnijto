@@ -15,7 +15,7 @@ import {
   type WierszBloku,
 } from "@/lib/plan";
 import { KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, koniecNaPlanie, wystapienia, type Dojazd, type Wyjatek } from "@/lib/dojazdy";
-import { Planer } from "./planer";
+import { Planer, type TestNaPlanie } from "./planer";
 import { PrzyciskScreenPlanu } from "./przycisk-screen";
 
 type Props = {
@@ -36,6 +36,18 @@ export default async function PlanPage({ searchParams }: Props) {
     .from("przedmioty")
     .select("id, nazwa, kolor")
     .order("nazwa");
+
+  // Sprawdziany, kartkówki i odpowiedzi ustne tygodnia (oznaczane na lekcjach danego przedmiotu).
+  let testy: TestNaPlanie[] = [];
+  if (!szablon) {
+    const { data } = await supabase
+      .from("zadania")
+      .select("termin, typ, przedmiot, tytul")
+      .neq("typ", "zwykle")
+      .gte("termin", tydzien)
+      .lte("termin", dodajDni(tydzien, 6));
+    testy = (data ?? []) as TestNaPlanie[];
+  }
 
   let bloki: WierszBloku[] = [];
   if (szablon) {
@@ -116,6 +128,7 @@ export default async function PlanPage({ searchParams }: Props) {
         dzis={dzis}
         osoby={(osobyDb ?? []) as OsobaMini[]}
         przedmioty={(przedmioty ?? []) as Przedmiot[]}
+        testy={testy}
         bloki={bloki}
         dojazdy={dojazdy.map((x) => ({
           id: `${x.dojazd.id}${x.data}`,

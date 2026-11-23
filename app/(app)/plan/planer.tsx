@@ -7,7 +7,7 @@ import { IkonaDojazdu } from "@/components/dojazdy/ikona";
 import { STYL_KIERUNKU } from "@/lib/dojazdy";
 import { createClient } from "@/lib/supabase/client";
 import { ZnacznikOsoby } from "@/components/osoba-znacznik";
-import { kolorOsoby, type OsobaMini } from "@/lib/zadania";
+import { etykietaTypu, kolorOsoby, type OsobaMini, type Typ } from "@/lib/zadania";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, dzienTygodnia } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
@@ -32,19 +32,24 @@ const NAGLOWKI_ZDJECIA = 84; // tytuł + nagłówki dni
 const KROK = 5; // przyciąganie do 5 minut
 const DOMYSLNY_CZAS = 45;
 
+export type TestNaPlanie = { termin: string; typ: Typ; przedmiot: string | null; tytul: string };
+
+const norm = (t: string | null | undefined) => (t ?? "").trim().toLowerCase();
+
 type Props = {
   tryb: "tydzien" | "szablon";
   tydzien: string;
   rodzinaId: string;
   dzis: string;
   przedmioty: Przedmiot[];
+  testy?: TestNaPlanie[];
   bloki: WierszBloku[];
   dojazdy?: DojazdNaPlanie[];
   osoby?: OsobaMini[];
 };
 
 
-export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: b0, dojazdy = [], osoby = [] }: Props) {
+export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy = [], bloki: b0, dojazdy = [], osoby = [] }: Props) {
   const router = useRouter();
   const [supabase] = useState(() => createClient());
   const [przedmioty, setPrzedmioty] = useState(p0);
@@ -319,6 +324,12 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                     const kolor = kolorDziecka;
                     const odwolana = b.status === "odwolana";
                     const etykieta = STATUS_ETYKIETA[b.status];
+                    // Sprawdzian, kartkówka lub odp. ustna z tego przedmiotu w tym dniu.
+                    const dataBloku = jestTydzien ? dodajDni(tydzien, b.dzien - 1) : null;
+                    const nazwaPrzedmiotu = norm(p?.nazwa);
+                    const test = dataBloku && nazwaPrzedmiotu
+                      ? testy.find((t) => t.termin === dataBloku && (norm(t.przedmiot) ? norm(t.przedmiot) === nazwaPrzedmiotu : norm(t.tytul).includes(nazwaPrzedmiotu)))
+                      : undefined;
                     return (
                       <div
                         key={b.id}
@@ -331,18 +342,30 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                           opacity: odwolana ? 0.6 : 1,
                           backgroundImage: odwolana
                             ? "repeating-linear-gradient(45deg, transparent 0 6px, rgba(0,0,0,0.06) 6px 12px)"
-                            : undefined,
+                            : test
+                              ? "repeating-linear-gradient(45deg, rgba(250,204,21,0.45) 0 8px, rgba(156,163,175,0.35) 8px 16px)"
+                              : undefined,
                         }}
                       >
                         <div className="px-1.5 pt-1">
                           <p className={`break-words font-semibold leading-tight ${odwolana ? "line-through" : ""}`}>
                             {b.nr_lekcji != null && <span className="mr-1 text-gray-500">{b.nr_lekcji}.</span>}
                             {p?.nazwa ?? "Lekcja"}
+                            {test && (
+                              <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 align-middle text-[11px] font-black leading-none text-white" title={etykietaTypu(test.typ)}>
+                                !
+                              </span>
+                            )}
                           </p>
                           <p className="break-words text-[11px] leading-tight text-gray-600">
                             {naCzas(b.start)}–{naCzas(b.koniec)}
                             {b.sala && ` · ${b.sala}`}
                           </p>
+                          {test && (
+                            <span className="mt-0.5 mr-1 inline-block rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-900">
+                              {etykietaTypu(test.typ)}
+                            </span>
+                          )}
                           {etykieta && (
                             <span className="mt-0.5 inline-block rounded bg-white/80 px-1 text-[10px] font-medium">
                               {etykieta}
