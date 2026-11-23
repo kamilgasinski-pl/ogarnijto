@@ -7,7 +7,6 @@ import { Czas } from "@/components/ui/czas";
 import { Input, Label, Select } from "@/components/ui/input";
 import {
   DNI,
-  KOLORY,
   STATUSY,
   naCzas,
   naMinuty,
@@ -53,7 +52,7 @@ export function Arkusz({
   async function dodajPrzedmiot() {
     const nazwa = nowy.trim();
     if (!nazwa) return;
-    const kolor = KORY(przedmioty.length);
+    const kolor = "#9ca3af"; // nowe przedmioty są szare
     const p = await onNowyPrzedmiot(nazwa, kolor);
     if (p) {
       setPrzedmiotId(p.id);
@@ -196,6 +195,3 @@ export function Arkusz({
   );
 }
 
-function KORY(n: number) {
-  return KOLORY[n % KOLORY.length];
-}

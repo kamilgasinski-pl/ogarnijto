@@ -62,6 +62,9 @@ export default async function DrukPlanu({ searchParams }: Props) {
   for (let m = od; m <= do_; m += 60) godziny.push(m);
 
   // Weekend na wydruku tylko, gdy coś w nim zaplanowano.
+  const dziecko = osoby.find((o) => o.rola === "uczen");
+  const kolorDziecka = (dziecko && kolorOsoby(dziecko.id, osoby)) ?? "#6b7280";
+
   const dni = [1, 2, 3, 4, 5];
   if (bloki.some((b) => b.dzien === 6) || dojazdy.some((d) => d.dzien === 6)) dni.push(6);
   if (bloki.some((b) => b.dzien === 7) || dojazdy.some((d) => d.dzien === 7)) dni.push(7);
@@ -132,7 +135,7 @@ export default async function DrukPlanu({ searchParams }: Props) {
                 .filter((b) => b.dzien === n)
                 .map((b) => {
                   const p = przedmioty.find((x) => x.id === b.przedmiot_id);
-                  const kolor = p?.kolor ?? "#9ca3af";
+                  const kolor = kolorDziecka;
                   const wys = (b.koniec - b.start) * ppm;
                   const odwolana = b.status === "odwolana";
                   return (
@@ -142,8 +145,8 @@ export default async function DrukPlanu({ searchParams }: Props) {
                       style={{
                         top: (b.start - od) * ppm,
                         height: wys - 1,
-                        backgroundColor: `${kolor}40`,
-                        borderLeft: `3px solid ${kolor}`,
+                        backgroundColor: "#6b728022",
+                        borderLeft: `4px solid ${kolor}`,
                         opacity: odwolana ? 0.55 : 1,
                       }}
                     >

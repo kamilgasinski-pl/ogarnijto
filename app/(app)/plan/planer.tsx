@@ -87,6 +87,10 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
 
   const dni = [1, 2, 3, 4, 5, 6, 7]; // cały tydzień; weekend można planować tak samo jak dni szkolne
 
+  // Zajęcia są szare, a pasek z lewej ma kolor dziecka (uczeń z listy osób).
+  const dziecko = osoby.find((o) => o.rola === "uczen");
+  const kolorDziecka = (dziecko && kolorOsoby(dziecko.id, osoby)) ?? "#6b7280";
+
   const przedmiotPo = (id: string | null) => przedmioty.find((p) => p.id === id);
 
   function doWiersza(b: Szkic | Podglad) {
@@ -325,7 +329,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
           <button
             key={n}
             onClick={() => setDzien(n)}
-            className={`flex-1 rounded-full py-1.5 text-sm ${dzien === n ? "bg-gray-900 text-white" : n >= 6 ? "bg-indigo-100 text-indigo-800" : "bg-gray-200 text-gray-700"}`}
+            className={`flex-1 rounded-full py-1.5 text-sm ${dzien === n ? "bg-gray-900 text-white" : "bg-gray-200 text-gray-700"}`}
           >
             {DNI_KROTKO[n - 1]}
             {jestTydzien && (
@@ -357,9 +361,9 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
           return (
             <div
               key={n}
-              className={`${dzien === n ? "block" : "hidden"} min-w-0 flex-1 border-r border-gray-100 last:border-r-0 md:block md:min-w-[8.5rem] ${n >= 6 ? "bg-indigo-50/60" : ""}`}
+              className={`${dzien === n ? "block" : "hidden"} min-w-0 flex-1 border-r border-gray-100 last:border-r-0 md:block md:min-w-[8.5rem]`}
             >
-              <div className={`hidden h-9 items-center justify-center text-sm font-medium md:flex ${n >= 6 ? "bg-indigo-100/80 text-indigo-800" : "text-gray-600"} ${data === dzis ? "underline" : ""}`}>
+              <div className={`hidden h-9 items-center justify-center text-sm font-medium md:flex ${data === dzis ? "text-gray-900 underline" : "text-gray-600"}`}>
                 {DNI[n - 1]}
                 {data && <span className="ml-1 text-xs font-normal text-gray-400">{dzienMiesiac(data)}</span>}
               </div>
@@ -430,7 +434,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                   .filter((b) => b.dzien === n)
                   .map((b) => {
                     const p = przedmiotPo(b.przedmiot_id);
-                    const kolor = p?.kolor ?? "#9ca3af";
+                    const kolor = kolorDziecka;
                     const odwolana = b.status === "odwolana";
                     const przeciagany = podglad?.id === b.id;
                     const etykieta = STATUS_ETYKIETA[b.status];
@@ -449,8 +453,8 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                         style={{
                           top: (b.start - godzOd) * PPM,
                           height: (b.koniec - b.start) * PPM - 1,
-                          backgroundColor: `${kolor}30`,
-                          borderLeft: `4px solid ${kolor}`,
+                          backgroundColor: "#6b728022",
+                          borderLeft: `5px solid ${kolor}`,
                           touchAction: "pan-y",
                           opacity: odwolana ? 0.6 : 1,
                           backgroundImage: odwolana
