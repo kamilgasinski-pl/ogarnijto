@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
+import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { IkonaDojazdu } from "@/components/dojazdy/ikona";
 import { STYL_KIERUNKU } from "@/lib/dojazdy";
@@ -39,26 +40,6 @@ type Props = {
   osoby?: OsobaMini[];
 };
 
-type Podglad = { id: string; dzien: number; start: number; koniec: number };
-
-type Przeciaganie = {
-  id: string;
-  tryb: "przesun" | "rozciagnij";
-  dotyk: boolean;
-  x0: number;
-  y0: number;
-  orig: { dzien: number; start: number; koniec: number };
-  aktywne: boolean;
-  anulowane: boolean;
-  timer: number | null;
-  ostatni: Podglad | null;
-};
-
-function blokujPrzewijanie(e: TouchEvent) {
-  if (e.cancelable) e.preventDefault();
-}
-
-const przyciagnij = (min: number) => Math.round(min / KROK) * KROK;
 
 export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: b0, dojazdy = [], osoby = [] }: Props) {
   const router = useRouter();
@@ -67,10 +48,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
   const [bloki, setBloki] = useState<Blok[]>(() => b0.map(zWiersza));
   const [dzien, setDzien] = useState(() => dzienTygodnia(dzis));
   const [szkic, setSzkic] = useState<Szkic | null>(null);
-  const [podglad, setPodglad] = useState<Podglad | null>(null);
   const [blad, setBlad] = useState<string | null>(null);
-  const kolumny = useRef<Record<number, HTMLDivElement | null>>({});
-  const drag = useRef<Przeciaganie | null>(null);
 
   const jestTydzien = tryb === "tydzien";
   const tabela = jestTydzien ? "bloki_planu" : "bloki_szablonu";
@@ -93,7 +71,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
 
   const przedmiotPo = (id: string | null) => przedmioty.find((p) => p.id === id);
 
-  function doWiersza(b: Szkic | Podglad) {
+  function doWiersza(b: Szkic) {
     const w: Record<string, unknown> = {
       dzien: b.dzien,
       godz_start: naCzas(b.start),
@@ -163,112 +141,6 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
     return p;
   }
 
-  // ---------- przeciąganie ----------
-
-  function zakoncz() {
-    const d = drag.current;
-    if (d?.timer) window.clearTimeout(d.timer);
-    window.removeEventListener("touchmove", blokujPrzewijanie);
-    drag.current = null;
-    setPodglad(null);
-  }
-
-  function aktywuj(d: Przeciaganie) {
-    d.aktywne = true;
-    if (d.dotyk) {
-      window.addEventListener("touchmove", blokujPrzewijanie, { passive: false });
-      navigator.vibrate?.(15);
-    }
-  }
-
-  function start(e: React.PointerEvent<HTMLElement>, b: Blok, t: "przesun" | "rozciagnij") {
-    if (e.button !== 0) return;
-    e.stopPropagation();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const d: Przeciaganie = {
-      id: b.id,
-      tryb: t,
-      dotyk: e.pointerType !== "mouse",
-      x0: e.clientX,
-      y0: e.clientY,
-      orig: { dzien: b.dzien, start: b.start, koniec: b.koniec },
-      aktywne: false,
-      anulowane: false,
-      timer: null,
-      ostatni: null,
-    };
-    drag.current = d;
-    if (t === "rozciagnij") aktywuj(d);
-    else if (d.dotyk) {
-      d.timer = window.setTimeout(() => {
-        aktywuj(d);
-        setPodglad({ id: b.id, ...d.orig });
-      }, 350);
-    }
-  }
-
-  function ruch(e: React.PointerEvent<HTMLElement>) {
-    const d = drag.current;
-    if (!d || d.anulowane) return;
-    const dx = e.clientX - d.x0;
-    const dy = e.clientY - d.y0;
-    if (!d.aktywne) {
-      if (d.dotyk) {
-        // ruch przed długim przytrzymaniem = zwykłe przewijanie strony
-        if (Math.hypot(dx, dy) > 8) {
-          if (d.timer) window.clearTimeout(d.timer);
-          d.anulowane = true;
-        }
-        return;
-      }
-      if (Math.hypot(dx, dy) < 4) return;
-      aktywuj(d);
-    }
-    const minuty = przyciagnij(dy / PPM);
-    const dl = d.orig.koniec - d.orig.start;
-    if (d.tryb === "rozciagnij") {
-      const koniec = Math.min(godzDo, Math.max(d.orig.start + 15, przyciagnij(d.orig.koniec + minuty)));
-      d.ostatni = { id: d.id, dzien: d.orig.dzien, start: d.orig.start, koniec };
-      setPodglad(d.ostatni);
-      return;
-    }
-    const nowyStart = Math.min(godzDo - dl, Math.max(godzOd, d.orig.start + minuty));
-    let nowyDzien = d.orig.dzien;
-    for (const n of dni) {
-      const r = kolumny.current[n]?.getBoundingClientRect();
-      if (r && r.width > 0 && e.clientX >= r.left && e.clientX < r.right) nowyDzien = n;
-    }
-    d.ostatni = { id: d.id, dzien: nowyDzien, start: nowyStart, koniec: nowyStart + dl };
-    setPodglad(d.ostatni);
-  }
-
-  async function koniecRuchu(e: React.PointerEvent<HTMLElement>, b: Blok) {
-    const d = drag.current;
-    if (!d) return;
-    const bylAktywny = d.aktywne;
-    const anulowane = d.anulowane;
-    const p = d.ostatni;
-    zakoncz();
-    if (e.type === "pointercancel" || anulowane) return;
-    if (!bylAktywny) {
-      if (d.tryb === "przesun") setSzkic({ ...b });
-      return;
-    }
-    if (!p || (p.dzien === b.dzien && p.start === b.start && p.koniec === b.koniec)) return;
-    const stare = bloki;
-    setBloki((s) =>
-      s.map((x) => (x.id === b.id ? { ...x, dzien: p.dzien, start: p.start, koniec: p.koniec } : x)),
-    );
-    const { error } = await supabase
-      .from(tabela)
-      .update(doWiersza({ id: b.id, dzien: p.dzien, start: p.start, koniec: p.koniec }))
-      .eq("id", b.id);
-    if (error) {
-      setBloki(stare);
-      setBlad(tlumaczBlad(error.message));
-    }
-  }
-
   function klikWPuste(e: React.MouseEvent<HTMLDivElement>, n: number) {
     if (e.target !== e.currentTarget) return;
     const r = e.currentTarget.getBoundingClientRect();
@@ -309,9 +181,6 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
   }
 
   // ---------- render ----------
-
-  const widoczny = (b: Blok): Blok =>
-    podglad?.id === b.id ? { ...b, dzien: podglad.dzien, start: podglad.start, koniec: podglad.koniec } : b;
 
   return (
     <div className="space-y-3">
@@ -368,9 +237,6 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                 {data && <span className="ml-1 text-xs font-normal text-gray-400">{dzienMiesiac(data)}</span>}
               </div>
               <div
-                ref={(el) => {
-                  kolumny.current[n] = el;
-                }}
                 className="relative cursor-cell"
                 style={{ height: wysokosc }}
                 onClick={(e) => klikWPuste(e, n)}
@@ -430,32 +296,21 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                     );
                   })}
                 {bloki
-                  .map(widoczny)
                   .filter((b) => b.dzien === n)
                   .map((b) => {
                     const p = przedmiotPo(b.przedmiot_id);
                     const kolor = kolorDziecka;
                     const odwolana = b.status === "odwolana";
-                    const przeciagany = podglad?.id === b.id;
                     const etykieta = STATUS_ETYKIETA[b.status];
                     return (
                       <div
                         key={b.id}
-                        role="button"
-                        tabIndex={0}
-                        onPointerDown={(e) => start(e, b, "przesun")}
-                        onPointerMove={ruch}
-                        onPointerUp={(e) => koniecRuchu(e, b)}
-                        onPointerCancel={(e) => koniecRuchu(e, b)}
-                        onContextMenu={(e) => e.preventDefault()}
-                        onKeyDown={(e) => e.key === "Enter" && setSzkic({ ...b })}
-                        className={`absolute inset-x-0.5 select-none overflow-hidden rounded-md text-xs text-gray-900 ${przeciagany ? "z-20 shadow-lg ring-2 ring-gray-900" : "z-10"} ${b.status === "dodatkowa" ? "border border-dashed border-gray-500" : ""}`}
+                        className={`absolute inset-x-0.5 z-10 overflow-hidden rounded-md text-xs text-gray-900 ${b.status === "dodatkowa" ? "border border-dashed border-gray-500" : ""}`}
                         style={{
                           top: (b.start - godzOd) * PPM,
                           height: (b.koniec - b.start) * PPM - 1,
                           backgroundColor: "#6b728022",
                           borderLeft: `5px solid ${kolor}`,
-                          touchAction: "pan-y",
                           opacity: odwolana ? 0.6 : 1,
                           backgroundImage: odwolana
                             ? "repeating-linear-gradient(45deg, transparent 0 6px, rgba(0,0,0,0.06) 6px 12px)"
@@ -477,16 +332,16 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
                             </span>
                           )}
                         </div>
-                        <div
-                          className="absolute inset-x-0 bottom-0 flex h-4 cursor-ns-resize items-end justify-center pb-0.5"
-                          style={{ touchAction: "none" }}
-                          onPointerDown={(e) => start(e, b, "rozciagnij")}
-                          onPointerMove={ruch}
-                          onPointerUp={(e) => koniecRuchu(e, b)}
-                          onPointerCancel={(e) => koniecRuchu(e, b)}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSzkic({ ...b });
+                          }}
+                          className="absolute right-1 top-1 flex items-center gap-1 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-medium text-gray-800 shadow-sm ring-1 ring-gray-300 hover:bg-white"
                         >
-                          <span className="h-1 w-6 rounded-full bg-gray-900/30" />
-                        </div>
+                          <Pencil size={11} /> Edytuj
+                        </button>
                       </div>
                     );
                   })}
@@ -497,8 +352,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
       </div>
 
       <p className="text-xs text-gray-500">
-        Kliknij puste miejsce, by dodać lekcję. Dotknij lekcji, by ją edytować. Przytrzymaj, by
-        przesunąć, a uchwyt na dole rozciąga blok.
+        Dotknij pustego miejsca, by dodać lekcję. Aby zmienić lekcję, użyj przycisku „Edytuj” w jej bloku.
       </p>
 
       {jestTydzien && (
