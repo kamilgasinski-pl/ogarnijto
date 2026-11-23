@@ -242,7 +242,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
             ? `Plan zajęć · ${dzienMiesiac(tydzien)}–${dzienMiesiac(dodajDni(tydzien, 6))}`
             : "Plan zajęć · szablon tygodnia"}
         </p>
-      <div className="flex md:overflow-x-auto rounded-xl border border-gray-200 bg-white group-data-[zdjecie]/z:w-full group-data-[zdjecie]/z:overflow-visible">
+      <div className="flex md:overflow-x-auto md:overflow-y-hidden md:overscroll-x-contain rounded-xl border border-gray-200 bg-white group-data-[zdjecie]/z:w-full group-data-[zdjecie]/z:overflow-visible">
         {/* oś godzin */}
         <div className="w-10 shrink-0 border-r border-gray-100 md:w-12">
           <div className="hidden h-9 group-data-[zdjecie]/z:block! md:block" />
