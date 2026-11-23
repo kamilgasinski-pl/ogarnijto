@@ -36,7 +36,8 @@ export default async function Pulpit({
   const jutro = jutroDlaWidoku(dzis);
   const tydzien = tydzienISO(dzis);
   const poprawna = sp.tydzien && /^\d{4}-\d{2}-\d{2}$/.test(sp.tydzien);
-  const wybrany = tydzienISO(poprawna ? sp.tydzien! : dzis);
+  // Domyślnie pokazujemy kolejny tydzień (bieżący i tak widać w Dziś i Jutro); strzałkami można wrócić.
+  const wybrany = tydzienISO(poprawna ? sp.tydzien! : dodajDni(dzis, 7));
   const dzienNr = dzienTygodnia(dzis);
 
   // Zadania z reguł powtarzalnych: dopilnuj, by istniały dla widocznego zakresu.

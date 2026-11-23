@@ -11,7 +11,7 @@ import { STYL_KIERUNKU } from "@/lib/dojazdy";
 import { AlarmClock, Check, ShoppingCart, ChevronDown, ChevronRight, ListChecks, Pencil, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
-import { dodajDni, dzienMiesiac, etykietaDnia } from "@/lib/dates";
+import { dodajDni, dzienMiesiac, etykietaDnia, poniedzialek } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
@@ -450,7 +450,8 @@ export function Zadania({
           {tydzienOtwarty && (
             <div className="flex items-center gap-2">
               <Link href={`/?tydzien=${dodajDni(t.start, -7)}`} className={nawig} aria-label="Poprzedni tydzień">←</Link>
-              {!t.biezacy && <Link href="/" className={nawig}>Ten tydzień</Link>}
+              {!t.biezacy && <Link href={`/?tydzien=${poniedzialek(dzis)}`} className={nawig}>Ten tydzień</Link>}
+              {t.start !== dodajDni(poniedzialek(dzis), 7) && <Link href="/" className={nawig}>Kolejny</Link>}
               <Link href={`/?tydzien=${dodajDni(t.start, 7)}`} className={nawig} aria-label="Następny tydzień">→</Link>
             </div>
           )}
