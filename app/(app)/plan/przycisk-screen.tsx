@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Camera, Check } from "lucide-react";
 import { kopiujObraz } from "@/lib/zdjecie";
+import { SZEROKOSC_ZDJECIA } from "./planer";
 
 /** Robi zdjęcie całego tygodniowego planu (wszystkie dni obok siebie), do wysłania komunikatorem. */
 export function PrzyciskScreenPlanu({ tydzien, klasa }: { tydzien: string; klasa: string }) {
@@ -14,13 +15,15 @@ export function PrzyciskScreenPlanu({ tydzien, klasa }: { tydzien: string; klasa
     setStan("trwa");
     // Na czas zdjęcia pokazujemy wszystkie dni obok siebie (na telefonie widać normalnie jeden).
     el.dataset.zdjecie = "1";
-    el.style.width = "1280px"; // stała szerokość: zdjęcie bez pustego pola, taka sama na każdym urządzeniu
+    el.style.width = `${SZEROKOSC_ZDJECIA}px`; // stała szerokość i proporcje A4 poziomo, jak na wydruku
+    window.dispatchEvent(new CustomEvent("planer-zdjecie", { detail: true }));
     try {
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await new Promise((r) => setTimeout(r, 150));
       setStan(await kopiujObraz(el, `plan-tygodnia-${tydzien}.png`, "Plan zajęć"));
     } catch {
       setStan("blad");
     } finally {
+      window.dispatchEvent(new CustomEvent("planer-zdjecie", { detail: false }));
       delete el.dataset.zdjecie;
       el.style.width = "";
     }

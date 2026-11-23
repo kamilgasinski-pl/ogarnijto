@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { IkonaDojazdu } from "@/components/dojazdy/ikona";
@@ -25,7 +25,10 @@ import {
 } from "@/lib/plan";
 import { Arkusz, type Szkic } from "./arkusz";
 
-const PPM = 1.75; // pikseli na minutę
+const PPM_NORMALNIE = 1.75; // pikseli na minutę
+export const SZEROKOSC_ZDJECIA = 1400; // zdjęcie planu ma proporcje A4 poziomo (297:210)
+const WYSOKOSC_ZDJECIA = Math.round(SZEROKOSC_ZDJECIA * (210 / 297));
+const NAGLOWKI_ZDJECIA = 84; // tytuł + nagłówki dni
 const KROK = 5; // przyciąganie do 5 minut
 const DOMYSLNY_CZAS = 45;
 
@@ -49,6 +52,13 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
   const [dzien, setDzien] = useState(() => dzienTygodnia(dzis));
   const [szkic, setSzkic] = useState<Szkic | null>(null);
   const [blad, setBlad] = useState<string | null>(null);
+  // Na czas robienia zdjęcia plan jest ściśnięty pionowo do proporcji A4 poziomo.
+  const [zdj, setZdj] = useState(false);
+  useEffect(() => {
+    const f = (e: Event) => setZdj((e as CustomEvent<boolean>).detail);
+    window.addEventListener("planer-zdjecie", f);
+    return () => window.removeEventListener("planer-zdjecie", f);
+  }, []);
 
   const jestTydzien = tryb === "tydzien";
   const tabela = jestTydzien ? "bloki_planu" : "bloki_szablonu";
@@ -59,6 +69,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, bloki: 
   const maxKoniec = Math.max(16 * 60, ...bloki.map((b) => b.koniec), ...dojazdy.map((d) => d.koniec));
   const godzOd = Math.floor(minStart / 60) * 60;
   const godzDo = Math.min(24 * 60, Math.ceil(maxKoniec / 60) * 60);
+  const PPM = zdj ? (WYSOKOSC_ZDJECIA - NAGLOWKI_ZDJECIA) / (godzDo - godzOd) : PPM_NORMALNIE;
   const wysokosc = (godzDo - godzOd) * PPM;
   const godziny: number[] = [];
   for (let m = godzOd; m <= godzDo; m += 60) godziny.push(m);
