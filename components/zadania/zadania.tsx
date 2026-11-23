@@ -279,6 +279,15 @@ export function Zadania({
   }, [kluczFiltra, osoby]);
   // Widok tygodnia na pulpicie: domyślnie zwinięty, wybór pamiętany w przeglądarce.
   const [tydzienOtwarty, setTydzienOtwarty] = useState(false);
+  // Wykonane zadania są domyślnie ukryte; sekcje, w których je rozwinięto.
+  const [rozwiniete, setRozwiniete] = useState<Set<string>>(new Set());
+  const przelaczZrobione = (k: string) =>
+    setRozwiniete((s0) => {
+      const n = new Set(s0);
+      if (n.has(k)) n.delete(k);
+      else n.add(k);
+      return n;
+    });
   useEffect(() => {
     try {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -387,35 +396,67 @@ export function Zadania({
     return k ? { kolor: k, imie: osoby.find((o) => o.id === id)?.imie } : {};
   };
 
+  function wierszeZadan(lista: Zadanie[], zalegle: boolean, klucz?: string) {
+    const aktywne = lista.filter((z) => z.status !== "zrobione");
+    const zrobione = lista.filter((z) => z.status === "zrobione");
+    const otwarte = !!klucz && rozwiniete.has(klucz);
+    const wiersz = (z: Zadanie) => (
+      <Wiersz
+        key={z.id}
+        koloruj={filtr === "wszystkie"}
+        zablokowane={rola !== "rodzic"}
+        z={z}
+        podzadania={podDla(z.id)}
+        osoby={osoby}
+        zalegle={zalegle && jestZalegle(z, dzis)}
+        dzis={dzis}
+        onStatus={ustawStatus}
+        onPrzenies={przenies}
+        onOtworz={() => setEdycja(z.id)}
+      />
+    );
+    return { aktywne: aktywne.map(wiersz), zrobione: zrobione.length, rozwiniete: otwarte ? zrobione.map(wiersz) : [] };
+  }
+
+  function przelacznikZrobionych(klucz: string, liczba: number) {
+    if (liczba === 0) return null;
+    const otwarte = rozwiniete.has(klucz);
+    return (
+      <button
+        type="button"
+        onClick={() => przelaczZrobione(klucz)}
+        aria-expanded={otwarte}
+        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
+      >
+        {otwarte ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+        Zrealizowane ({liczba})
+      </button>
+    );
+  }
+
   function sekcja(naglowek: string, lista: Zadanie[], pusto?: string, dodatek?: React.ReactNode, doj: DojazdWiersz[] = []) {
+    const w = wierszeZadan(lista, true, naglowek);
+    const aktywnych = lista.length - w.zrobione;
     return (
       <section key={naglowek} className="space-y-2">
         <h2 className="text-sm font-semibold text-gray-700">
-          {naglowek} <span className="font-normal text-gray-400">{lista.length > 0 && lista.length}</span>
+          {naglowek} <span className="font-normal text-gray-400">{aktywnych > 0 && aktywnych}</span>
         </h2>
-        {lista.length === 0 && doj.length === 0 ? (
+        {w.aktywne.length === 0 && doj.length === 0 && w.zrobione === 0 ? (
           pusto && <p className="text-sm text-gray-400">{pusto}</p>
         ) : (
-          <ul className="space-y-1.5">
-            {doj.map((x) => (
-              <WierszDojazdu key={x.id + x.data} d={x} onEdytuj={() => setDojazdEdycja(x)} {...kolorDla(x.przypisano_id)} />
-            ))}
-            {lista.map((z) => (
-              <Wiersz
-                key={z.id}
-                koloruj={filtr === "wszystkie"}
-                zablokowane={rola !== "rodzic"}
-                z={z}
-                podzadania={podDla(z.id)}
-                osoby={osoby}
-                zalegle={jestZalegle(z, dzis)}
-                dzis={dzis}
-                onStatus={ustawStatus}
-                onPrzenies={przenies}
-                onOtworz={() => setEdycja(z.id)}
-              />
-            ))}
-          </ul>
+          <>
+            {(w.aktywne.length > 0 || doj.length > 0) && (
+              <ul className="space-y-1.5">
+                {doj.map((x) => (
+                  <WierszDojazdu key={x.id + x.data} d={x} onEdytuj={() => setDojazdEdycja(x)} {...kolorDla(x.przypisano_id)} />
+                ))}
+                {w.aktywne}
+              </ul>
+            )}
+            {przelacznikZrobionych(naglowek, w.zrobione)}
+            {w.rozwiniete.length > 0 && <ul className="space-y-1.5">{w.rozwiniete}</ul>}
+          </>
         )}
         {dodatek}
       </section>
@@ -460,6 +501,7 @@ export function Zadania({
         {tydzienOtwarty && dni.map((d) => {
           const lista = lista0.filter((z) => z.termin === d).sort(sortuj);
           const doj = dojazdyDnia(d);
+          const wz = wierszeZadan(lista, false, "tydz-" + d);
           return (
             <div key={d} className="space-y-1.5">
               <h3 className={`text-sm font-semibold ${d === dzis ? "text-gray-900" : "text-gray-600"}`}>
@@ -469,26 +511,16 @@ export function Zadania({
               {lista.length === 0 && doj.length === 0 ? (
                 <p className="text-sm text-gray-300">—</p>
               ) : (
-                <ul className="space-y-1.5">
-                  {doj.map((x) => (
-                    <WierszDojazdu key={x.id + x.data} d={x} onEdytuj={() => setDojazdEdycja(x)} {...kolorDla(x.przypisano_id)} />
-                  ))}
-                  {lista.map((z) => (
-                    <Wiersz
-                      key={z.id}
-                      koloruj={filtr === "wszystkie"}
-                      zablokowane={rola !== "rodzic"}
-                      z={z}
-                      podzadania={podDla(z.id)}
-                      osoby={osoby}
-                      zalegle={false}
-                      dzis={dzis}
-                      onStatus={ustawStatus}
-                      onPrzenies={przenies}
-                      onOtworz={() => setEdycja(z.id)}
-                    />
-                  ))}
-                </ul>
+                <>
+                  <ul className="space-y-1.5">
+                    {doj.map((x) => (
+                      <WierszDojazdu key={x.id + x.data} d={x} onEdytuj={() => setDojazdEdycja(x)} {...kolorDla(x.przypisano_id)} />
+                    ))}
+                    {wz.aktywne}
+                  </ul>
+                  {przelacznikZrobionych("tydz-" + d, wz.zrobione)}
+                  {wz.rozwiniete.length > 0 && <ul className="space-y-1.5">{wz.rozwiniete}</ul>}
+                </>
               )}
             </div>
           );
