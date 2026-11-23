@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Plus, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
@@ -43,6 +43,21 @@ export function ArkuszZadania({
   onZamknij,
 }: Props) {
   const [supabase] = useState(() => createClient());
+  // Przedmioty zdefiniowane w planie zajęć – przedmiot zadania wybiera się z tej listy.
+  const [przedmioty, setPrzedmioty] = useState<string[]>([]);
+  useEffect(() => {
+    let aktywny = true;
+    supabase
+      .from("przedmioty")
+      .select("nazwa")
+      .order("nazwa")
+      .then(({ data }) => {
+        if (aktywny) setPrzedmioty((data ?? []).map((r) => r.nazwa as string));
+      });
+    return () => {
+      aktywny = false;
+    };
+  }, [supabase]);
   const [z, setZ] = useState<Zadanie>(() => ({ ...zadanie, kategoria: kategoriaZadania(zadanie) }));
   const [od, setOd] = useState(krotkaGodzina(zadanie.godz_start) ?? "");
   const [do_, setDo] = useState(krotkaGodzina(zadanie.godz_koniec) ?? "");
@@ -195,7 +210,14 @@ export function ArkuszZadania({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="przedmiot">Przedmiot</Label>
-            <Input id="przedmiot" value={z.przedmiot ?? ""} onChange={(e) => setZ({ ...z, przedmiot: e.target.value })} />
+            <Select id="przedmiot" value={z.przedmiot ?? ""} onChange={(e) => setZ({ ...z, przedmiot: e.target.value || null })}>
+              <option value="">— bez przedmiotu —</option>
+              {przedmioty.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+              {/* Wartość zapisana wcześniej wpisana ręcznie, której nie ma na liście przedmiotów */}
+              {z.przedmiot && !przedmioty.includes(z.przedmiot) && <option value={z.przedmiot}>{z.przedmiot} (spoza planu)</option>}
+            </Select>
           </div>
           <div className="col-span-2 space-y-1.5">
             <Label htmlFor="kategoria">Kategoria</Label>
