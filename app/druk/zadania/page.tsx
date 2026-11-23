@@ -1,9 +1,6 @@
 import Link from "next/link";
-import { IkonaDojazdu } from "@/components/dojazdy/ikona";
 import { wymagajRodziny } from "@/lib/auth";
 import { dodajDni, dzienMiesiac, dzisiaj, etykietaDnia, jutroDlaWidoku, poniedzialek } from "@/lib/dates";
-import { KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, wystapienia, type Dojazd, type Wyjatek } from "@/lib/dojazdy";
-import { naCzas } from "@/lib/plan";
 import {
   jestMoje,
   dzienWidoku,
@@ -61,14 +58,6 @@ export default async function DrukZadan({ searchParams }: Props) {
       .order("kolejnosc");
     podzadania = (data ?? []) as Podzadanie[];
   }
-
-  const [{ data: dojDb }, { data: wyjDb }] = await Promise.all([
-    supabase.from("dojazdy").select(KOLUMNY_DOJAZDOW),
-    supabase.from("dojazdy_wyjatki").select(KOLUMNY_WYJATKOW).gte("data", dzis).lte("data", koniecEfektywny),
-  ]);
-  const dojazdy = wystapienia((dojDb ?? []) as Dojazd[], (wyjDb ?? []) as Wyjatek[], dzis, koniecEfektywny).filter(
-    (w) => !w.odwolany && (!wybrana || w.dojazd.przypisano_id === wybrana.id),
-  );
 
   const zalegle = zadania.filter((z) => jestZalegle(z, dzis));
   const dni: string[] = [];
@@ -154,35 +143,23 @@ export default async function DrukZadan({ searchParams }: Props) {
         )}
         {dni.map((d) => {
           const lista = zadania.filter((z) => dzienWidoku(z, dzis) === d && !jestZalegle(z, dzis));
-          const doj = dojazdy.filter((w) => w.data === d);
-          if (lista.length === 0 && doj.length === 0 && dni.length > 1) return null;
+          if (lista.length === 0 && dni.length > 1) return null;
           return (
             <section key={d}>
               <h2 className="mb-1 border-b border-gray-400 text-sm font-bold uppercase tracking-wide text-gray-700">
                 {etykietaDnia(d, dzis)} <span className="font-normal normal-case text-gray-500">{dzienMiesiac(d)}</span>
               </h2>
-              {lista.length === 0 && doj.length === 0 ? (
+              {lista.length === 0 ? (
                 <p className="text-sm text-gray-400">Brak zadań.</p>
               ) : (
                 <ul className="space-y-2">
-                  {doj.map((w) => (
-                    <li key={w.dojazd.id + w.data} className="flex flex-wrap items-center gap-2 text-sm">
-                      <IkonaDojazdu rodzaj={w.dojazd.rodzaj} kierunek={w.dojazd.kierunek} size={14} />
-                      <span className="font-medium">
-                        {naCzas(w.start)}
-                        {w.koniec != null && `–${naCzas(w.koniec)}`}
-                      </span>
-                      <span>{w.dojazd.tytul}</span>
-                      {w.dojazd.opis && <p className="w-full whitespace-pre-line pl-6 text-xs text-gray-500">{w.dojazd.opis}</p>}
-                    </li>
-                  ))}
                   {lista.map(blok)}
                 </ul>
               )}
             </section>
           );
         })}
-        {zadania.length === 0 && dojazdy.length === 0 && <p className="text-sm text-gray-400">Brak zadań do zrobienia.</p>}
+        {zadania.length === 0 && <p className="text-sm text-gray-400">Brak zadań do zrobienia.</p>}
       </div>
     </main>
   );
