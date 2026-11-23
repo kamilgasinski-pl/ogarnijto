@@ -7,7 +7,7 @@ import { tlumaczBlad } from "@/lib/bledy";
 import { Input, Select } from "@/components/ui/input";
 import { KATEGORIE, TYPY, type Kategoria } from "@/lib/zadania";
 
-type Wlasna = { id: string; nazwa: string };
+type Wlasna = { id: string; nazwa: string; na_pulpicie: boolean; na_planerze: boolean };
 
 /**
  * Lista kategorii: sprawdzian / kartkówka / odp. ustna (opcjonalnie), kategorie wbudowane
@@ -30,13 +30,15 @@ export function WyborKategorii({
   const [wlasne, setWlasne] = useState<Wlasna[]>([]);
   const [edycja, setEdycja] = useState(false);
   const [nowa, setNowa] = useState("");
+  const [naPulpicie, setNaPulpicie] = useState(true);
+  const [naPlanerze, setNaPlanerze] = useState(true);
   const [blad, setBlad] = useState<string | null>(null);
 
   useEffect(() => {
     let aktywny = true;
     supabase
       .from("kategorie_wlasne")
-      .select("id, nazwa")
+      .select("id, nazwa, na_pulpicie, na_planerze")
       .order("nazwa")
       .then(({ data }) => {
         if (aktywny) setWlasne((data ?? []) as Wlasna[]);
@@ -61,13 +63,23 @@ export function WyborKategorii({
     if (zajeta) return setBlad("Taka kategoria już istnieje.");
     const { data, error } = await supabase
       .from("kategorie_wlasne")
-      .insert({ rodzina_id: rodzinaId, nazwa })
-      .select("id, nazwa")
+      .insert({ rodzina_id: rodzinaId, nazwa, na_pulpicie: naPulpicie, na_planerze: naPlanerze })
+      .select("id, nazwa, na_pulpicie, na_planerze")
       .single();
     if (error) return setBlad(tlumaczBlad(error.message));
     setWlasne((l) => [...l, data as Wlasna].sort((a, b) => a.nazwa.localeCompare(b.nazwa, "pl")));
     onZmien(nazwa);
     setNowa("");
+  }
+
+  async function przelacz(k: Wlasna, pole: "na_pulpicie" | "na_planerze") {
+    const wartosc = !k[pole];
+    setWlasne((l) => l.map((x) => (x.id === k.id ? { ...x, [pole]: wartosc } : x)));
+    const { error } = await supabase.from("kategorie_wlasne").update({ [pole]: wartosc }).eq("id", k.id);
+    if (error) {
+      setWlasne((l) => l.map((x) => (x.id === k.id ? { ...x, [pole]: !wartosc } : x)));
+      setBlad(tlumaczBlad(error.message));
+    }
   }
 
   async function usun(k: Wlasna) {
@@ -125,11 +137,25 @@ export function WyborKategorii({
               <Plus size={15} /> Dodaj
             </button>
           </div>
+          <label className="flex items-start gap-2 text-sm text-gray-700">
+            <input type="checkbox" className="mt-0.5" checked={naPulpicie} onChange={(e) => setNaPulpicie(e.target.checked)} />
+            Pokazuj te zadania na pulpicie w „Najbliższych sprawdzianach i kartkówkach”
+          </label>
+          <label className="flex items-start gap-2 text-sm text-gray-700">
+            <input type="checkbox" className="mt-0.5" checked={naPlanerze} onChange={(e) => setNaPlanerze(e.target.checked)} />
+            Oznacz przedmiot wykrzyknikiem na planerze w dniu terminu
+          </label>
           {wlasne.length > 0 && (
-            <ul className="flex flex-wrap gap-1.5">
+            <ul className="space-y-1.5">
               {wlasne.map((k) => (
-                <li key={k.id} className="flex items-center gap-1 rounded-full border border-gray-300 bg-white py-0.5 pl-2.5 pr-1 text-sm">
-                  {k.nazwa}
+                <li key={k.id} className="flex flex-wrap items-center gap-1.5 rounded-lg border border-gray-300 bg-white py-1 pl-2.5 pr-1 text-sm">
+                  <span className="mr-auto font-medium">{k.nazwa}</span>
+                  <button type="button" onClick={() => przelacz(k, "na_pulpicie")} title="Pokazuj na pulpicie w najbliższych sprawdzianach" aria-pressed={k.na_pulpicie} className={`rounded-full px-2 py-0.5 text-xs ${k.na_pulpicie ? "bg-amber-100 text-amber-900" : "bg-gray-100 text-gray-400 line-through"}`}>
+                    pulpit
+                  </button>
+                  <button type="button" onClick={() => przelacz(k, "na_planerze")} title="Oznacz wykrzyknikiem na planerze" aria-pressed={k.na_planerze} className={`rounded-full px-2 py-0.5 text-xs ${k.na_planerze ? "bg-amber-100 text-amber-900" : "bg-gray-100 text-gray-400 line-through"}`}>
+                    planer !
+                  </button>
                   <button type="button" aria-label={`Usuń kategorię ${k.nazwa}`} onClick={() => usun(k)} className="rounded-full p-1 text-gray-500 hover:text-red-600">
                     <Trash2 size={13} />
                   </button>

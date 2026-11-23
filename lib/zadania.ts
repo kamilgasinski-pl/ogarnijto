@@ -59,6 +59,10 @@ export function typDlaKategorii(k: Kategoria): Typ {
   return KATEGORIE_TESTOW.includes(k) ? (k as Typ) : "zwykle";
 }
 
+export function etykietaZadania(z: Pick<Zadanie, "typ" | "kategoria">): string {
+  return z.typ !== "zwykle" ? etykietaTypu(z.typ) : etykietaKategorii(z.kategoria);
+}
+
 /** Kategoria widoczna w formularzu: dla sprawdzianów itp. wynika z rodzaju zadania. */
 export function kategoriaZadania(z: Pick<Zadanie, "typ" | "kategoria">): Kategoria {
   return z.typ !== "zwykle" ? z.typ : z.kategoria;

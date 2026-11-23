@@ -7,7 +7,7 @@ import { IkonaDojazdu } from "@/components/dojazdy/ikona";
 import { STYL_KIERUNKU } from "@/lib/dojazdy";
 import { createClient } from "@/lib/supabase/client";
 import { ZnacznikOsoby } from "@/components/osoba-znacznik";
-import { etykietaTypu, kolorOsoby, type OsobaMini, type Typ } from "@/lib/zadania";
+import { kolorOsoby, type OsobaMini } from "@/lib/zadania";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dodajDni, dzienMiesiac, dzienTygodnia } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ const NAGLOWKI_ZDJECIA = 84; // tytuł + nagłówki dni
 const KROK = 5; // przyciąganie do 5 minut
 const DOMYSLNY_CZAS = 45;
 
-export type TestNaPlanie = { termin: string; typ: Typ; przedmiot: string | null; tytul: string };
+export type TestNaPlanie = { termin: string; etykieta: string; przedmiot: string | null; tytul: string };
 
 const norm = (t: string | null | undefined) => (t ?? "").trim().toLowerCase();
 
@@ -352,7 +352,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                             {b.nr_lekcji != null && <span className="mr-1 text-gray-500">{b.nr_lekcji}.</span>}
                             {p?.nazwa ?? "Lekcja"}
                             {test && (
-                              <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 align-middle text-[11px] font-black leading-none text-white" title={etykietaTypu(test.typ)}>
+                              <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 align-middle text-[11px] font-black leading-none text-white" title={test.etykieta}>
                                 !
                               </span>
                             )}
@@ -363,7 +363,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                           </p>
                           {test && (
                             <span className="mt-0.5 mr-1 inline-block rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-900">
-                              {etykietaTypu(test.typ)}
+                              {test.etykieta}
                             </span>
                           )}
                           {etykieta && (

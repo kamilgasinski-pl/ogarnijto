@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { OsobaMini } from "@/lib/zadania";
+import { etykietaZadania, type OsobaMini, type Typ } from "@/lib/zadania";
 import { wymagajRodziny } from "@/lib/auth";
 import {
   dodajDni,
@@ -40,13 +40,24 @@ export default async function PlanPage({ searchParams }: Props) {
   // Sprawdziany, kartkówki i odpowiedzi ustne tygodnia (oznaczane na lekcjach danego przedmiotu).
   let testy: TestNaPlanie[] = [];
   if (!szablon) {
-    const { data } = await supabase
-      .from("zadania")
-      .select("termin, typ, przedmiot, tytul")
-      .neq("typ", "zwykle")
-      .gte("termin", tydzien)
-      .lte("termin", dodajDni(tydzien, 6));
-    testy = (data ?? []) as TestNaPlanie[];
+    const { data: wlasne } = await supabase.from("kategorie_wlasne").select("nazwa").eq("na_planerze", true);
+    const nazwy = (wlasne ?? []).map((k) => k.nazwa as string);
+    const zapytanie = () =>
+      supabase
+        .from("zadania")
+        .select("termin, typ, kategoria, przedmiot, tytul")
+        .gte("termin", tydzien)
+        .lte("termin", dodajDni(tydzien, 6));
+    const [{ data: wbudowane }, { data: wlasneDb }] = await Promise.all([
+      zapytanie().neq("typ", "zwykle"),
+      nazwy.length > 0 ? zapytanie().in("kategoria", nazwy) : Promise.resolve({ data: [] }),
+    ]);
+    testy = [...(wbudowane ?? []), ...(wlasneDb ?? [])].map((z) => ({
+      termin: z.termin as string,
+      etykieta: etykietaZadania({ typ: z.typ as Typ, kategoria: z.kategoria as string }),
+      przedmiot: z.przedmiot as string | null,
+      tytul: z.tytul as string,
+    }));
   }
 
   let bloki: WierszBloku[] = [];
