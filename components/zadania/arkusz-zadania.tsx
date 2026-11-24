@@ -26,6 +26,7 @@ type Props = {
   podzadania: Podzadanie[];
   rodzinaId: string;
   osoby: OsobaMini[];
+  rola?: "uczen" | "rodzic";
   onZapisz: (z: Zadanie) => void;
   onUsun: (id: string) => void;
   onPodzadania: (zadanieId: string, lista: Podzadanie[]) => void;
@@ -37,6 +38,7 @@ export function ArkuszZadania({
   podzadania,
   rodzinaId,
   osoby,
+  rola,
   onZapisz,
   onUsun,
   onPodzadania,
@@ -225,6 +227,7 @@ export function ArkuszZadania({
               id="kategoria"
               wartosc={z.kategoria}
               rodzinaId={rodzinaId}
+              bezZakupow={rola === "uczen" && z.kategoria !== "zakupy"}
               onZmien={(k) => {
                 const jestTest = typDlaKategorii(k) !== "zwykle";
                 // Wybór sprawdzianu, kartkówki lub odp. ustnej od razu włącza obie opcje widoczności.

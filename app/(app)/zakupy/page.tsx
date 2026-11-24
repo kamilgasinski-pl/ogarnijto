@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { wymagajRodziny } from "@/lib/auth";
 import { dodajDni, dzisiaj } from "@/lib/dates";
 import { KOLUMNY_PODZADAN, KOLUMNY_ZADAN, type OsobaMini, type Podzadanie, type Zadanie } from "@/lib/zadania";
@@ -5,6 +6,7 @@ import { Zakupy } from "./zakupy";
 
 export default async function ZakupyPage() {
   const { supabase, osoba } = await wymagajRodziny();
+  if (osoba.rola !== "rodzic") redirect("/"); // zakupy tylko dla rodziców
   const dzis = dzisiaj();
   const { data: osobyDb } = await supabase.from("osoby").select("id, imie, rola").order("created_at");
   // Otwarte listy (także po terminie) i zakończone z ostatnich dwóch tygodni.

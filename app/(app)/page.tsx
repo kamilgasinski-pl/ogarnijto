@@ -49,13 +49,16 @@ export default async function Pulpit({
   const zadaniaIPodzadania = async () => {
     await supabase.rpc("zapewnij_powtarzalne", { p_od: od, p_do: do_ });
     // Zadania: niewykonane do jutra (w tym zaległe) oraz wszystko z dziś i jutra.
-    const { data: zad } = await supabase
+    let zapytanieZadan = supabase
       .from("zadania")
       .select(KOLUMNY_ZADAN)
       .or(
         `and(status.eq.do_zrobienia,termin.lte.${jutro}),and(status.eq.do_zrobienia,na_dzien.lte.${dzis}),termin.in.(${dzis},${jutro}),and(termin.gte.${wybrany.start},termin.lte.${wybrany.koniec})`,
       )
       .order("termin");
+    // Zakupy to zadania tylko dla rodziców.
+    if (osoba.rola !== "rodzic") zapytanieZadan = zapytanieZadan.neq("kategoria", "zakupy");
+    const { data: zad } = await zapytanieZadan;
     const zadania = (zad ?? []) as Zadanie[];
     let podzadania: Podzadanie[] = [];
     if (zadania.length > 0) {
@@ -72,12 +75,14 @@ export default async function Pulpit({
   // W piątek i weekend: ile zadań czeka na sobotę i niedzielę.
   const weekendLista = async () => {
     if (dzienNr < 5) return [] as { przypisano_id: string | null; wykonawca: Wykonawca }[];
-    const { data } = await supabase
+    let q = supabase
       .from("zadania")
       .select("przypisano_id, wykonawca")
       .eq("status", "do_zrobienia")
       .gt("termin", dzis)
       .lt("termin", jutro);
+    if (osoba.rola !== "rodzic") q = q.neq("kategoria", "zakupy");
+    const { data } = await q;
     return (data ?? []) as { przypisano_id: string | null; wykonawca: Wykonawca }[];
   };
 
@@ -138,7 +143,7 @@ export default async function Pulpit({
 
   // Najbliższe sprawdziany, kartkówki i odpowiedzi (60 dni do przodu) wraz z postępem nauki (umiem x/y).
   const sprawdziany = async () => {
-    const { data: testyDb } = await supabase
+    let q = supabase
       .from("zadania")
       .select(KOLUMNY_ZADAN)
       .eq("pokaz_na_pulpicie", true)
@@ -147,6 +152,8 @@ export default async function Pulpit({
       .lte("termin", dodajDni(dzis, 60))
       .order("termin")
       .limit(8);
+    if (osoba.rola !== "rodzic") q = q.neq("kategoria", "zakupy");
+    const { data: testyDb } = await q;
     const nadchodzace = (testyDb ?? []) as Zadanie[];
     const postep = new Map<string, { ok: number; razem: number }>();
     if (nadchodzace.length > 0) {

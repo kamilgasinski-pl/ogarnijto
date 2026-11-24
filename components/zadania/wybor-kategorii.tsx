@@ -19,12 +19,14 @@ export function WyborKategorii({
   onZmien,
   rodzinaId,
   zTestami = true,
+  bezZakupow = false,
 }: {
   id: string;
   wartosc: Kategoria;
   onZmien: (k: Kategoria) => void;
   rodzinaId: string;
   zTestami?: boolean;
+  bezZakupow?: boolean; // zakupy to zadania tylko dla rodziców
 }) {
   const [supabase] = useState(() => createClient());
   const [wlasne, setWlasne] = useState<Wlasna[]>([]);
@@ -46,7 +48,7 @@ export function WyborKategorii({
     };
   }, [supabase]);
 
-  const wbudowane = [...(zTestami ? TYPY.filter((t) => t.wartosc !== "zwykle") : []), ...KATEGORIE];
+  const wbudowane = [...(zTestami ? TYPY.filter((t) => t.wartosc !== "zwykle") : []), ...KATEGORIE.filter((k) => !(bezZakupow && k.wartosc === "zakupy"))];
   // Zapisana kategoria mogła zostać usunięta z listy – nadal ją pokazujemy.
   const brakuje =
     !wbudowane.some((k) => k.wartosc === wartosc) && !wlasne.some((k) => k.nazwa === wartosc) && wartosc;

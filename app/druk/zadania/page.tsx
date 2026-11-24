@@ -38,12 +38,14 @@ export default async function DrukZadan({ searchParams }: Props) {
   const osoby = (osobyDb ?? []) as OsobaMini[];
   const wybrana = kto === "wszystkie" ? null : osoby.find((o) => o.id === (kto === "moje" ? osoba.id : kto)) ?? osoba;
 
-  const { data: zad } = await supabase
+  let zapytanie = supabase
     .from("zadania")
     .select(KOLUMNY_ZADAN)
     .eq("status", "do_zrobienia")
     .lte("termin", dodajDni(koniecEfektywny, 1))
     .order("termin");
+  if (osoba.rola !== "rodzic") zapytanie = zapytanie.neq("kategoria", "zakupy");
+  const { data: zad } = await zapytanie;
   const zadania = ((zad ?? []) as Zadanie[])
     .filter((z) => jestZalegle(z, dzis) || dzienWidoku(z, dzis) <= koniecEfektywny)
     .filter((z) => !wybrana || jestMoje(z, wybrana.id, wybrana.rola))

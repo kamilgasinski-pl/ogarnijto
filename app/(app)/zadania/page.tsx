@@ -17,11 +17,14 @@ export default async function ZadaniaPage() {
   const { data: osobyDb } = await supabase.from("osoby").select("id, imie, rola").order("created_at");
 
   // Niewykonane (wszystkie) oraz wykonane z ostatnich 14 dni i przyszłości.
-  const { data } = await supabase
+  let zapytanie = supabase
     .from("zadania")
     .select(KOLUMNY_ZADAN)
     .or(`status.eq.do_zrobienia,termin.gte.${dodajDni(dzis, -14)}`)
     .order("termin");
+  // Zakupy to zadania tylko dla rodziców.
+  if (osoba.rola !== "rodzic") zapytanie = zapytanie.neq("kategoria", "zakupy");
+  const { data } = await zapytanie;
   const zadania = (data ?? []) as Zadanie[];
 
   let podzadania: Podzadanie[] = [];

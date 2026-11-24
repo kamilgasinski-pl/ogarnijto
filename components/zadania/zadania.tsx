@@ -671,6 +671,7 @@ export function Zadania({
           podzadania={podDla(edytowane.id)}
           rodzinaId={rodzinaId}
           osoby={osoby}
+          rola={rola}
           onZapisz={(z) => setZadania((s) => s.map((x) => (x.id === z.id ? z : x)))}
           onUsun={(id) => setZadania((s) => s.filter((x) => x.id !== id))}
           onPodzadania={(id, lista) =>
