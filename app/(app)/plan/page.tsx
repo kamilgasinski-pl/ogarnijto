@@ -13,6 +13,7 @@ import {
   KOLUMNY_TYGODNIA,
   type Przedmiot,
   type WierszBloku,
+  naCzas,
 } from "@/lib/plan";
 import { KOLUMNY_DOJAZDOW, KOLUMNY_WYJATKOW, koniecNaPlanie, wystapienia, type Dojazd, type Wyjatek } from "@/lib/dojazdy";
 import { Planer, type TestNaPlanie } from "./planer";
@@ -145,6 +146,13 @@ export default async function PlanPage({ searchParams }: Props) {
           start: x.start,
           koniec: koniecNaPlanie(x),
           odwolany: x.odwolany,
+          wyjatek: {
+            dojazdId: x.dojazd.id,
+            data: x.data,
+            start: naCzas(x.start),
+            koniec: x.koniec != null ? naCzas(x.koniec) : null,
+            maWyjatek: !!x.wyjatek,
+          },
         }))}
       />
     </div>

@@ -24,6 +24,7 @@ import {
   type WierszBloku,
 } from "@/lib/plan";
 import { Arkusz, type Szkic } from "./arkusz";
+import { ArkuszWyjatku, type CelWyjatku } from "@/components/dojazdy/arkusz-wyjatku";
 
 const PPM_NORMALNIE = 1.75; // pikseli na minutę
 export const SZEROKOSC_ZDJECIA = 1400; // zdjęcie planu ma proporcje A4 poziomo (297:210)
@@ -71,6 +72,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
   const [blad, setBlad] = useState<string | null>(null);
   // Na czas robienia zdjęcia plan jest ściśnięty pionowo do proporcji A4 poziomo.
   const [zdj, setZdj] = useState(false);
+  const [wyjatek, setWyjatek] = useState<CelWyjatku | null>(null);
   useEffect(() => {
     const f = (e: Event) => setZdj((e as CustomEvent<boolean>).detail);
     window.addEventListener("planer-zdjecie", f);
@@ -299,6 +301,22 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                           ...(kolorOs ? { borderLeftWidth: 5, borderLeftStyle: "solid", borderLeftColor: kolorOs } : {}),
                         }}
                       >
+                        {d.wyjatek && (
+                          <button
+                            type="button"
+                            data-bez-zdjecia
+                            aria-label="Zmień ten dojazd tylko w tym dniu"
+                            title="Zmień tylko ten dzień"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const w = d.wyjatek!;
+                              setWyjatek({ rodzinaId, dojazdId: w.dojazdId, tytul: d.tytul, data: w.data, start: w.start, koniec: w.koniec, odwolany: d.odwolany, maWyjatek: w.maWyjatek });
+                            }}
+                            className="pointer-events-auto absolute right-0.5 top-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-sm ring-1 ring-gray-300 hover:bg-white"
+                          >
+                            <Pencil size={11} />
+                          </button>
+                        )}
                         {wys >= 36 ? (
                           <div className="pt-0.5">
                             <p className={`flex items-center gap-1 font-semibold leading-tight ${d.odwolany ? "line-through" : ""}`}>
@@ -422,6 +440,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
         </div>
       )}
 
+      {wyjatek && <ArkuszWyjatku key={wyjatek.dojazdId + wyjatek.data} cel={wyjatek} onZamknij={() => setWyjatek(null)} />}
       {szkic && (
         <Arkusz
           key={szkic.id ?? "nowy"}
