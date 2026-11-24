@@ -168,7 +168,7 @@ export function jestMoje(
   mojeId: string,
   rola: "uczen" | "rodzic",
 ): boolean {
-  if (z.kategoria === "zakupy") return true; // lista zakupów jest wspólna: widzi ją cała rodzina
+  if (z.kategoria === "zakupy") return rola === "rodzic"; // zakupy to zadania tylko dla rodziców (także w filtrze dziecka)
   if (z.przypisano_id) return z.przypisano_id === mojeId;
   if (z.wykonawca === "oba") return true;
   return z.wykonawca === (rola === "rodzic" ? "rodzic" : "dziecko");
