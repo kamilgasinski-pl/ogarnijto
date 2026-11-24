@@ -7,7 +7,7 @@ import { tlumaczBlad } from "@/lib/bledy";
 import { dzienMiesiac, dzienTygodnia } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import { Czas } from "@/components/ui/czas";
-import { Label } from "@/components/ui/input";
+import { Label, Textarea } from "@/components/ui/input";
 import { DNI_KROTKO } from "@/lib/zadania";
 
 export type CelWyjatku = {
@@ -19,6 +19,7 @@ export type CelWyjatku = {
   koniec: string | null;
   odwolany: boolean;
   maWyjatek: boolean;
+  notatka?: string | null;
 };
 
 /** Zmiana pojedynczego dnia dojazdu: inna godzina, odwołanie albo powrót do standardu. */
@@ -27,6 +28,7 @@ export function ArkuszWyjatku({ cel, onZamknij }: { cel: CelWyjatku; onZamknij: 
   const [supabase] = useState(() => createClient());
   const [od, setOd] = useState(cel.start);
   const [do_, setDo] = useState(cel.koniec ?? "");
+  const [notatka, setNotatka] = useState(cel.notatka ?? "");
   const [blad, setBlad] = useState<string | null>(null);
   const [trwa, setTrwa] = useState(false);
 
@@ -35,7 +37,7 @@ export function ArkuszWyjatku({ cel, onZamknij }: { cel: CelWyjatku; onZamknij: 
     setTrwa(true);
     const { error } = await supabase
       .from("dojazdy_wyjatki")
-      .upsert({ rodzina_id: cel.rodzinaId, dojazd_id: cel.dojazdId, data: cel.data, ...pola }, { onConflict: "dojazd_id,data" });
+      .upsert({ rodzina_id: cel.rodzinaId, dojazd_id: cel.dojazdId, data: cel.data, notatka: notatka.trim() || null, ...pola }, { onConflict: "dojazd_id,data" });
     setTrwa(false);
     if (error) return setBlad(tlumaczBlad(error.message));
     onZamknij();
@@ -70,6 +72,10 @@ export function ArkuszWyjatku({ cel, onZamknij }: { cel: CelWyjatku; onZamknij: 
             <Label>Godzina do</Label>
             <Czas opcjonalny wartosc={do_} onZmien={setDo} />
           </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="notatka-wyjatku">Notatka do tej zmiany (opcjonalnie)</Label>
+          <Textarea id="notatka-wyjatku" rows={2} value={notatka} onChange={(e) => setNotatka(e.target.value)} placeholder="np. odbiera babcia, zajęcia krócej" />
         </div>
         {blad && <p className="text-sm text-red-600">{blad}</p>}
         <div className="flex flex-wrap gap-2">

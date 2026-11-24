@@ -287,7 +287,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                 {dojazdy
                   .filter((d) => d.dzien === n)
                   .map((d) => {
-                    const wys = Math.max((d.koniec - d.start) * PPM - 1, 22);
+                    const wys = Math.max((d.koniec - d.start) * PPM - 1, d.notatka ? 48 : 22);
                     const imieOsoby = osoby.find((o) => o.id === d.przypisano_id)?.imie ?? null;
                     const kolorOs = osoby.length > 1 ? kolorOsoby(d.przypisano_id, osoby) : null;
                     const czas = `${naCzas(d.start)}${d.koniec - d.start > 30 ? `–${naCzas(d.koniec)}` : ""}`;
@@ -298,6 +298,10 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                         style={{
                           top: (d.start - godzOd) * PPM,
                           height: wys,
+                          // Zmiana względem stałego rozkładu: niebiesko-szare paski.
+                          ...(d.zmieniony && !d.odwolany
+                            ? { backgroundImage: "repeating-linear-gradient(45deg, rgba(59,130,246,0.22) 0 7px, rgba(107,114,128,0.22) 7px 14px)" }
+                            : {}),
                           ...(kolorOs ? { borderLeftWidth: 5, borderLeftStyle: "solid", borderLeftColor: kolorOs } : {}),
                         }}
                       >
@@ -310,7 +314,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                             onClick={(e) => {
                               e.stopPropagation();
                               const w = d.wyjatek!;
-                              setWyjatek({ rodzinaId, dojazdId: w.dojazdId, tytul: d.tytul, data: w.data, start: w.start, koniec: w.koniec, odwolany: d.odwolany, maWyjatek: w.maWyjatek });
+                              setWyjatek({ rodzinaId, dojazdId: w.dojazdId, tytul: d.tytul, data: w.data, start: w.start, koniec: w.koniec, odwolany: d.odwolany, maWyjatek: w.maWyjatek, notatka: d.notatka });
                             }}
                             className="pointer-events-auto absolute right-0.5 top-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-sm ring-1 ring-gray-300 hover:bg-white"
                           >
@@ -330,6 +334,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                               </span>
                               {imieOsoby && (kolorOs ? <ZnacznikOsoby kolor={kolorOs} imie={imieOsoby} /> : <span>· {imieOsoby}</span>)}
                             </p>
+                            {d.notatka && <p className="whitespace-pre-line text-[10px] leading-tight text-gray-500">{d.notatka}</p>}
                           </div>
                         ) : (
                           <p className={`flex h-full items-center gap-1 font-semibold leading-tight ${d.odwolany ? "line-through" : ""}`}>

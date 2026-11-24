@@ -109,5 +109,7 @@ export type DojazdNaPlanie = {
   koniec: number;
   odwolany: boolean;
   /** Tylko w widoku tygodnia: pozwala zmienić ten jeden dzień (wyjątek od stałego rozkładu). */
+  zmieniony?: boolean; // godzina zmieniona względem stałego rozkładu
+  notatka?: string | null;
   wyjatek?: { dojazdId: string; data: string; start: string; koniec: string | null; maWyjatek: boolean };
 };

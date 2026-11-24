@@ -44,6 +44,7 @@ export type DojazdWiersz = {
   odwolany: boolean;
   zmieniony: boolean;
   maWyjatek: boolean;
+  notatka?: string | null;
   opis?: string | null;
   bylo?: string | null;
 };
@@ -595,6 +596,7 @@ export function Zadania({
         koniec: dojazdEdycja.koniec,
         odwolany: dojazdEdycja.odwolany,
         maWyjatek: dojazdEdycja.maWyjatek,
+        notatka: dojazdEdycja.notatka,
       }}
     />
   );

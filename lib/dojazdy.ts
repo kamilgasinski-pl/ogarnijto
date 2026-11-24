@@ -62,10 +62,11 @@ export type Wyjatek = {
   odwolany: boolean;
   godz_start: string | null;
   godz_koniec: string | null;
+  notatka: string | null;
 };
 
 export const KOLUMNY_DOJAZDOW = "id, rodzaj, kierunek, tytul, opis, dni, godz_start, godz_koniec, przypisano_id, od, do_dnia";
-export const KOLUMNY_WYJATKOW = "id, dojazd_id, data, odwolany, godz_start, godz_koniec";
+export const KOLUMNY_WYJATKOW = "id, dojazd_id, data, odwolany, godz_start, godz_koniec, notatka";
 
 /** Konkretny dojazd w konkretnym dniu, po uwzględnieniu wyjątków. */
 export type Wystapienie = {

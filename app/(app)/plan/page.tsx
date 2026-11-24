@@ -146,6 +146,8 @@ export default async function PlanPage({ searchParams }: Props) {
           start: x.start,
           koniec: koniecNaPlanie(x),
           odwolany: x.odwolany,
+          zmieniony: x.zmieniony,
+          notatka: x.wyjatek?.notatka ?? null,
           wyjatek: {
             dojazdId: x.dojazd.id,
             data: x.data,
