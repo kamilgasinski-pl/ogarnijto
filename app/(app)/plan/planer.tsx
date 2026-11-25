@@ -90,6 +90,8 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
   const godzDo = Math.min(24 * 60, Math.ceil(maxKoniec / 60) * 60);
   const PPM = zdj ? (WYSOKOSC_ZDJECIA - NAGLOWKI_ZDJECIA) / (godzDo - godzOd) : PPM_NORMALNIE;
   const wysokosc = (godzDo - godzOd) * PPM;
+  /** Ile minut dojazd zajmuje na planie (nie dłużej niż 45 min i nie mniej niż minimalna wysokość bloku). */
+  const minutyDojazdu = (d: DojazdNaPlanie) => Math.max(Math.min(d.koniec - d.start, 45), (d.notatka ? 48 : 22) / PPM);
   const godziny: number[] = [];
   for (let m = godzOd; m <= godzDo; m += 60) godziny.push(m);
 
@@ -287,20 +289,25 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                 {dojazdy
                   .filter((d) => d.dzien === n)
                   .map((d) => {
-                    const wys = Math.max((d.koniec - d.start) * PPM - 1, d.notatka ? 48 : 22);
+                    // Dojazd to punkt w czasie: długi przedział nie może zasłaniać lekcji pod spodem.
+                    const wys = minutyDojazdu(d) * PPM - 1;
+                    // Dojazd nachodzący na lekcję: dzielimy kolumnę na dwa pasy, żeby nic się nie zasłaniało.
+                    const nakladaSie = bloki.some((b) => b.dzien === n && b.start < d.start + minutyDojazdu(d) && b.koniec > d.start);
                     const imieOsoby = osoby.find((o) => o.id === d.przypisano_id)?.imie ?? null;
                     const kolorOs = osoby.length > 1 ? kolorOsoby(d.przypisano_id, osoby) : null;
                     const czas = `${naCzas(d.start)}${d.koniec - d.start > 30 ? `–${naCzas(d.koniec)}` : ""}`;
                     return (
                       <div
                         key={d.id}
-                        className={`pointer-events-none absolute inset-x-0.5 z-[5] overflow-hidden rounded-md border border-dashed ${STYL_KIERUNKU[d.kierunek].planer} px-1.5 text-xs ${d.odwolany ? "opacity-50" : ""}`}
+                        className={`pointer-events-none absolute ${nakladaSie ? "left-[46%] right-0.5 z-20" : "inset-x-0.5 z-[5]"} overflow-hidden rounded-md border border-dashed ${STYL_KIERUNKU[d.kierunek].planer} px-1.5 text-xs shadow-sm ${d.odwolany ? "text-gray-500" : ""}`}
                         style={{
                           top: (d.start - godzOd) * PPM,
                           height: wys,
+                          // Tło zawsze pełne (nieprzezroczyste), żeby lekcja pod spodem nie prześwitywała.
+                          backgroundColor: d.odwolany ? "#f3f4f6" : d.kierunek === "odjazd" ? "#fff7ed" : "#f0f9ff",
                           // Zmiana względem stałego rozkładu: niebiesko-szare paski.
                           ...(d.zmieniony && !d.odwolany
-                            ? { backgroundImage: "repeating-linear-gradient(45deg, rgba(59,130,246,0.22) 0 7px, rgba(107,114,128,0.22) 7px 14px)" }
+                            ? { backgroundImage: "repeating-linear-gradient(45deg, rgba(59,130,246,0.25) 0 7px, rgba(107,114,128,0.25) 7px 14px)" }
                             : {}),
                           ...(kolorOs ? { borderLeftWidth: 5, borderLeftStyle: "solid", borderLeftColor: kolorOs } : {}),
                         }}
@@ -322,7 +329,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                           </button>
                         )}
                         {wys >= 36 ? (
-                          <div className="pt-0.5">
+                          <div className="pr-6 pt-0.5">
                             <p className={`flex items-center gap-1 font-semibold leading-tight ${d.odwolany ? "line-through" : ""}`}>
                               <IkonaDojazdu rodzaj={d.rodzaj} kierunek={d.kierunek} size={12} className="shrink-0" />
                               <span className="break-words">{d.tytul}</span>
@@ -337,7 +344,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                             {d.notatka && <p className="whitespace-pre-line text-[10px] leading-tight text-gray-500">{d.notatka}</p>}
                           </div>
                         ) : (
-                          <p className={`flex h-full items-center gap-1 font-semibold leading-tight ${d.odwolany ? "line-through" : ""}`}>
+                          <p className={`flex h-full items-center gap-1 ${d.wyjatek ? "pr-6" : ""} font-semibold leading-tight ${d.odwolany ? "line-through" : ""}`}>
                             <IkonaDojazdu rodzaj={d.rodzaj} kierunek={d.kierunek} size={12} className="shrink-0" />
                             <span className="min-w-0 break-words">
                               {naCzas(d.start)} {d.tytul}
@@ -362,13 +369,14 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                     // Sprawdzian, kartkówka lub odp. ustna z tego przedmiotu w tym dniu.
                     const dataBloku = jestTydzien ? dodajDni(tydzien, b.dzien - 1) : null;
                     const nazwaPrzedmiotu = norm(p?.nazwa);
+                    const maDojazd = dojazdy.some((d) => d.dzien === n && d.start < b.koniec && d.start + minutyDojazdu(d) > b.start);
                     const test = dataBloku && nazwaPrzedmiotu
                       ? testy.find((t) => t.termin === dataBloku && dotyczyPrzedmiotu(t, nazwaPrzedmiotu))
                       : undefined;
                     return (
                       <div
                         key={b.id}
-                        className={`absolute inset-x-0.5 z-10 overflow-hidden rounded-md text-xs text-gray-900 ${b.status === "dodatkowa" ? "border border-dashed border-gray-500" : ""}`}
+                        className={`absolute ${maDojazd ? "left-0.5 right-[55%]" : "inset-x-0.5"} z-10 overflow-hidden rounded-md text-xs text-gray-900 ${b.status === "dodatkowa" ? "border border-dashed border-gray-500" : ""}`}
                         style={{
                           top: (b.start - godzOd) * PPM,
                           height: (b.koniec - b.start) * PPM - 1,
