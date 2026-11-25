@@ -26,24 +26,16 @@ import {
   etykietaZadania,
 } from "@/lib/zadania";
 
-export default async function Pulpit({
-  searchParams,
-}: {
-  searchParams: Promise<{ tydzien?: string }>;
-}) {
+export default async function Pulpit() {
   const { supabase, osoba } = await wymagajRodziny();
-  const sp = await searchParams;
   const dzis = dzisiaj();
   const jutro = jutroDlaWidoku(dzis);
   const tydzien = tydzienISO(dzis);
-  const poprawna = sp.tydzien && /^\d{4}-\d{2}-\d{2}$/.test(sp.tydzien);
-  // Domyślnie pokazujemy kolejny tydzień (bieżący i tak widać w Dziś i Jutro); strzałkami można wrócić.
-  const wybrany = tydzienISO(poprawna ? sp.tydzien! : dodajDni(dzis, 7));
   const dzienNr = dzienTygodnia(dzis);
 
   // Zadania z reguł powtarzalnych: dopilnuj, by istniały dla widocznego zakresu.
-  const od = [dzis, wybrany.start].sort()[0];
-  const do_ = [jutro, wybrany.koniec].sort().reverse()[0];
+  const od = dzis;
+  const do_ = jutro;
   // Niezależne części pulpitu pobieramy równolegle, a nie jedna po drugiej: każde zapytanie to
   // osobna podróż do bazy, więc sekwencja znacznie wydłużała ładowanie (zwłaszcza na telefonie).
   const zadaniaIPodzadania = async () => {
@@ -53,7 +45,7 @@ export default async function Pulpit({
       .from("zadania")
       .select(KOLUMNY_ZADAN)
       .or(
-        `and(status.eq.do_zrobienia,termin.lte.${jutro}),and(status.eq.do_zrobienia,na_dzien.lte.${dzis}),termin.in.(${dzis},${jutro}),and(termin.gte.${wybrany.start},termin.lte.${wybrany.koniec})`,
+        `and(status.eq.do_zrobienia,termin.lte.${jutro}),and(status.eq.do_zrobienia,na_dzien.lte.${dzis}),termin.in.(${dzis},${jutro})`,
       )
       .order("termin");
     // Zakupy to zadania tylko dla rodziców.
@@ -132,9 +124,9 @@ export default async function Pulpit({
     });
   };
 
-  // Dojazdy na dziś, jutro i wybrany tydzień (filtr Moje/Wszystkie działa po stronie widoku).
-  const odDoj = [dzis, wybrany.start].sort()[0];
-  const doDoj = [jutro, wybrany.koniec].sort().reverse()[0];
+  // Dojazdy na dziś i jutro (filtr Moje/Wszystkie działa po stronie widoku).
+  const odDoj = dzis;
+  const doDoj = jutro;
   const dojazdyDb = () =>
     Promise.all([
       supabase.from("dojazdy").select(KOLUMNY_DOJAZDOW),
@@ -182,7 +174,6 @@ export default async function Pulpit({
     ]);
 
   const widoczneDni = new Set([dzis, jutro]);
-  for (let i = 0; i < 7; i++) widoczneDni.add(dodajDni(wybrany.start, i));
   const dojazdy: DojazdWiersz[] = wystapienia((dojDb ?? []) as Dojazd[], (wyjDb ?? []) as Wyjatek[], odDoj, doDoj)
     .filter((w) => widoczneDni.has(w.data))
     .map((w) => ({
@@ -279,7 +270,6 @@ export default async function Pulpit({
           )}
         </Card>
           <Zadania
-            key={wybrany.start}
             zadania={zadania}
             podzadania={podzadania}
             rodzinaId={osoba.rodzina_id}
@@ -291,7 +281,6 @@ export default async function Pulpit({
             widok="pulpit"
             weekend={weekend}
             dojazdy={dojazdy}
-            tydzien={{ ...wybrany, biezacy: wybrany.start === tydzien.start }}
           />
         </div>
         <div className="space-y-6">

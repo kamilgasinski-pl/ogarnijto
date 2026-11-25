@@ -11,7 +11,7 @@ import { STYL_KIERUNKU } from "@/lib/dojazdy";
 import { AlarmClock, Check, ShoppingCart, ChevronDown, ChevronRight, ListChecks, Pencil, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
-import { dodajDni, dzienMiesiac, etykietaDnia, poniedzialek } from "@/lib/dates";
+import { dzienMiesiac, etykietaDnia } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
@@ -177,7 +177,6 @@ type Props = {
   /** Zadania z soboty i niedzieli (do licznika "+ N zadań w weekend"). */
   weekend?: { przypisano_id: string | null; wykonawca: Wykonawca }[];
   /** Tydzień pokazywany na pulpicie (poniedziałek–niedziela). */
-  tydzien?: { start: string; numer: number; koniec: string; biezacy: boolean };
   /** Dojazdy (stały rozkład po uwzględnieniu wyjątków) na widoczne dni. */
   dojazdy?: DojazdWiersz[];
 };
@@ -205,8 +204,6 @@ export function Zadania({
   jutro,
   widok,
   weekend = [],
-  tydzien,
-  dojazdy = [],
 }: Props) {
   const [supabase] = useState(() => createClient());
   const router = useRouter();
@@ -266,8 +263,6 @@ export function Zadania({
       if (f && (f === "moje" || f === "wszystkie" || osoby.some((o) => o.id === f))) setFiltr(f);
     } catch {}
   }, [kluczFiltra, osoby]);
-  // Widok tygodnia na pulpicie: domyślnie zwinięty, wybór pamiętany w przeglądarce.
-  const [tydzienOtwarty, setTydzienOtwarty] = useState(false);
   // Wykonane zadania są domyślnie ukryte; sekcje, w których je rozwinięto.
   const [rozwiniete, setRozwiniete] = useState<Set<string>>(new Set());
   const przelaczZrobione = (k: string) =>
@@ -277,20 +272,6 @@ export function Zadania({
       else n.add(k);
       return n;
     });
-  useEffect(() => {
-    try {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (localStorage.getItem("ogarnijto.tydzien.otwarty") === "1") setTydzienOtwarty(true);
-    } catch {}
-  }, []);
-  function przelaczTydzien() {
-    const nowy = !tydzienOtwarty;
-    setTydzienOtwarty(nowy);
-    try {
-      localStorage.setItem("ogarnijto.tydzien.otwarty", nowy ? "1" : "0");
-    } catch {}
-  }
-
   function ustawFiltr(f: string) {
     setFiltr(f);
     try {
@@ -375,8 +356,6 @@ export function Zadania({
   const widoczne = lista0.filter((z) => pokazWykonane || widok === "pulpit" || z.status === "do_zrobienia");
   const zalegle = lista0.filter((z) => jestZalegle(z, dzis)).sort(sortuj);
   // Dojazdy podlegają temu samemu filtrowi: "Moje" to te przypisane do mnie.
-  const dojazdyDnia = (d: string) =>
-    dojazdy.filter((x) => x.data === d && (!osobaFiltru || x.przypisano_id === osobaFiltru.id));
   const weekendLiczba = weekend.filter(mojeFiltr).length;
   const ukryte = zadania.length - lista0.length;
 
@@ -452,72 +431,6 @@ export function Zadania({
     );
   }
 
-  function widokTygodnia(t: NonNullable<Props["tydzien"]>) {
-    const nawig =
-      "rounded-full border border-gray-300 bg-white px-3 py-1 text-sm hover:bg-gray-100";
-    const dni: string[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = dodajDni(t.start, i);
-      // sobotę i niedzielę pokazujemy tylko, gdy coś w nie wypada
-      if (i < 5 || lista0.some((z) => z.termin === d) || dojazdyDnia(d).length > 0) dni.push(d);
-    }
-    return (
-      <section className="space-y-3 border-t border-gray-200 pt-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={przelaczTydzien}
-            aria-expanded={tydzienOtwarty}
-            className="flex items-center gap-1.5 text-left"
-          >
-            {tydzienOtwarty ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-            <h2 className="text-lg font-semibold">
-              Tydzień {t.numer}{" "}
-              <span className="text-sm font-normal text-gray-500">
-                {dzienMiesiac(t.start)}–{dzienMiesiac(t.koniec)}
-              </span>
-            </h2>
-          </button>
-          {tydzienOtwarty && (
-            <div className="flex items-center gap-2">
-              <Link href={`/?tydzien=${dodajDni(t.start, -7)}`} className={nawig} aria-label="Poprzedni tydzień">←</Link>
-              {!t.biezacy && <Link href={`/?tydzien=${poniedzialek(dzis)}`} className={nawig}>Ten tydzień</Link>}
-              {t.start !== dodajDni(poniedzialek(dzis), 7) && <Link href="/" className={nawig}>Kolejny</Link>}
-              <Link href={`/?tydzien=${dodajDni(t.start, 7)}`} className={nawig} aria-label="Następny tydzień">→</Link>
-            </div>
-          )}
-        </div>
-        {tydzienOtwarty && dni.map((d) => {
-          const lista = lista0.filter((z) => z.termin === d).sort(sortuj);
-          const doj = dojazdyDnia(d);
-          const wz = wierszeZadan(lista, false, "tydz-" + d);
-          return (
-            <div key={d} className="space-y-1.5">
-              <h3 className={`text-sm font-semibold ${d === dzis ? "text-gray-900" : "text-gray-600"}`}>
-                {etykietaDnia(d, dzis)}
-                {d === dzis || d === jutro ? <span className="ml-1 font-normal text-gray-400">{dzienMiesiac(d)}</span> : null}
-              </h3>
-              {lista.length === 0 && doj.length === 0 ? (
-                <p className="text-sm text-gray-300">—</p>
-              ) : (
-                <>
-                  <ul className="space-y-1.5">
-                    {doj.map((x) => (
-                      <WierszDojazdu key={x.id + x.data} d={x} onEdytuj={() => setDojazdEdycja(x)} {...kolorDla(x.przypisano_id)} />
-                    ))}
-                    {wz.aktywne}
-                  </ul>
-                  {przelacznikZrobionych("tydz-" + d, wz.zrobione)}
-                  {wz.rozwiniete.length > 0 && <ul className="space-y-1.5">{wz.rozwiniete}</ul>}
-                </>
-              )}
-            </div>
-          );
-        })}
-      </section>
-    );
-  }
-
   let tresc: React.ReactNode;
   if (widok === "pulpit") {
     // Do zrobienia dziś: termin dziś albo zadanie z późniejszym terminem, które wypada zrobić już dziś
@@ -543,7 +456,6 @@ export function Zadania({
             </Link>
           ),
         )}
-        {tydzien && widokTygodnia(tydzien)}
       </>
     );
   } else {
