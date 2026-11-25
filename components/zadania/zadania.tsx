@@ -52,19 +52,12 @@ export type DojazdWiersz = {
 const KOLORY_KONFETTI = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6"];
 
 /** Nagroda po ukończeniu wszystkich zadań na dziś. Własny obrazek: plik public/nagroda.jpg. */
-function Nagroda({ imie, klucz, dzis }: { imie: string; klucz: string; dzis: string }) {
+function Nagroda({ imie }: { imie: string }) {
   const [obrazek, setObrazek] = useState(true);
   const [haslo, setHaslo] = useState<string | null>(null);
   const [konfetti, setKonfetti] = useState<
     { id: number; left: number; dx: number; czas: number; opoznienie: number; kolor: string }[]
   >([]);
-
-  useEffect(() => {
-    // Nagrodę pokazujemy raz dziennie na tym urządzeniu.
-    try {
-      localStorage.setItem(klucz, dzis);
-    } catch {}
-  }, [klucz, dzis]);
 
   useEffect(() => {
     // Losowanie dopiero po zamontowaniu (bez rozjazdu z renderem serwera).
@@ -125,25 +118,20 @@ function Nagroda({ imie, klucz, dzis }: { imie: string; klucz: string; dzis: str
 }
 
 /**
- * Pełna nagroda (konfetti, hasło, obrazek) pokazuje się tylko w chwili ukończenia ostatniego zadania
- * i najwyżej raz dziennie na urządzeniu. Przy kolejnych otwarciach aplikacji zostaje dyskretna linijka.
+ * Pełna nagroda (konfetti, hasło, obrazek) pokazuje się w chwili ukończenia ostatniego zadania na dziś,
+ * także jeśli po południu doszły nowe zadania i dziecko skończyło je znowu. Nie pokazuje się przy samym
+ * otwarciu aplikacji (wtedy zostaje dyskretna linijka).
  */
-function NagrodaDnia({ ukonczone, imie, klucz, dzis }: { ukonczone: boolean; imie: string; klucz: string; dzis: string }) {
+function NagrodaDnia({ ukonczone, imie }: { ukonczone: boolean; imie: string }) {
   const [poprzednio, setPoprzednio] = useState(ukonczone);
   const [swieto, setSwieto] = useState(false);
   if (poprzednio !== ukonczone) {
     setPoprzednio(ukonczone);
     if (!ukonczone) setSwieto(false);
-    else {
-      let juzBylo = false;
-      try {
-        juzBylo = localStorage.getItem(klucz) === dzis;
-      } catch {}
-      if (!juzBylo) setSwieto(true);
-    }
+    else setSwieto(true);
   }
   if (!ukonczone) return null;
-  if (swieto) return <Nagroda imie={imie} klucz={klucz} dzis={dzis} />;
+  if (swieto) return <Nagroda imie={imie} />;
   return (
     <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
       ✓ Wszystkie zadania na dziś ukończone
@@ -543,8 +531,6 @@ export function Zadania({
         <NagrodaDnia
           ukonczone={zalegle.length === 0 && dzisL.length > 0 && dzisL.every((z) => z.status === "zrobione")}
           imie={osobaFiltru?.imie ?? osoby.find((o) => o.id === mojeId)?.imie ?? ""}
-          klucz={`ogarnijto.nagroda.${mojeId}`}
-          dzis={dzis}
         />
         {sekcja("Dziś", dzisL, "Nic na dziś. Można odpocząć albo dodać zadanie.")}
         {sekcja(
