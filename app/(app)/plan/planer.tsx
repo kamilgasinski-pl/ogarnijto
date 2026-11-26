@@ -292,14 +292,17 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                     // Dojazd to punkt w czasie: długi przedział nie może zasłaniać lekcji pod spodem.
                     const wys = minutyDojazdu(d) * PPM - 1;
                     // Dojazd nachodzący na lekcję: dzielimy kolumnę na dwa pasy, żeby nic się nie zasłaniało.
-                    const nakladaSie = bloki.some((b) => b.dzien === n && b.start < d.start + minutyDojazdu(d) && b.koniec > d.start);
+                    const kolidujace = bloki.filter((b) => b.dzien === n && b.start < d.start + minutyDojazdu(d) && b.koniec > d.start);
+                    const nakladaSie = kolidujace.length > 0;
+                    // Odwołana lekcja nie jest ważna: dojazd (wiodący) dostaje szerszy pas, a odwołana lekcja wąski ukośnie paskowany.
+                    const tylkoOdwolane = nakladaSie && kolidujace.every((b) => b.status === "odwolana");
                     const imieOsoby = osoby.find((o) => o.id === d.przypisano_id)?.imie ?? null;
                     const kolorOs = osoby.length > 1 ? kolorOsoby(d.przypisano_id, osoby) : null;
                     const czas = `${naCzas(d.start)}${d.koniec - d.start > 30 ? `–${naCzas(d.koniec)}` : ""}`;
                     return (
                       <div
                         key={d.id}
-                        className={`pointer-events-none absolute ${nakladaSie ? "left-[46%] right-0.5 z-20" : "inset-x-0.5 z-[5]"} overflow-hidden rounded-md border border-dashed ${STYL_KIERUNKU[d.kierunek].planer} px-1.5 text-xs shadow-sm ${d.odwolany ? "text-gray-500" : ""}`}
+                        className={`pointer-events-none absolute ${nakladaSie ? (tylkoOdwolane ? "left-[26%] right-0.5 z-20" : "left-[46%] right-0.5 z-20") : "inset-x-0.5 z-[5]"} overflow-hidden rounded-md border border-dashed ${STYL_KIERUNKU[d.kierunek].planer} px-1.5 text-xs shadow-sm ${d.odwolany ? "text-gray-500" : ""}`}
                         style={{
                           top: (d.start - godzOd) * PPM,
                           height: wys,
@@ -376,7 +379,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                     return (
                       <div
                         key={b.id}
-                        className={`absolute ${maDojazd ? "left-0.5 right-[55%]" : "inset-x-0.5"} z-10 overflow-hidden rounded-md text-xs text-gray-900 ${b.status === "dodatkowa" ? "border border-dashed border-gray-500" : ""}`}
+                        className={`absolute ${maDojazd ? (odwolana ? "left-0.5 right-[76%]" : "left-0.5 right-[55%]") : "inset-x-0.5"} z-10 overflow-hidden rounded-md text-xs text-gray-900 ${b.status === "dodatkowa" ? "border border-dashed border-gray-500" : ""}`}
                         style={{
                           top: (b.start - godzOd) * PPM,
                           height: (b.koniec - b.start) * PPM - 1,
