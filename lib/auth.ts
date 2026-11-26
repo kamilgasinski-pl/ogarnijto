@@ -18,15 +18,17 @@ export type Osoba = {
  */
 export const pobierzOsobe = cache(async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  // getClaims weryfikuje token lokalnie (bez podróży do serwera auth), więc nie spowalnia każdej strony.
+  // Dane chroni i tak RLS w bazie.
+  const { data: claims } = await supabase.auth.getClaims();
+  const userId = claims?.claims?.sub;
+  if (!userId) redirect("/login");
+  const user = { id: userId };
 
   const { data: osoba, error } = await supabase
     .from("osoby")
     .select("id, rodzina_id, rola, imie")
-    .eq("id", user.id)
+    .eq("id", userId)
     .maybeSingle<Osoba>();
 
   // Błąd odczytu (np. brak uprawnień w bazie) nie może wyglądać jak brak rodziny.

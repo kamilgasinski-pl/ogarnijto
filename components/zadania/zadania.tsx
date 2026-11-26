@@ -232,12 +232,17 @@ export function Zadania({
       const zmienione = new Map((data as unknown as Zadanie[]).map((x) => [x.id, x]));
       setZadania((s) => s.map((x) => zmienione.get(x.id) ?? x));
     };
+    let ostatnieOdswiezenie = 0;
     const wroc = () => {
       if (document.visibilityState !== "visible") return;
-      router.refresh();
+      // Pełne odświeżenie widoku jest kosztowne: nie częściej niż co 20 s.
+      if (Date.now() - ostatnieOdswiezenie > 20_000) {
+        ostatnieOdswiezenie = Date.now();
+        router.refresh();
+      }
       lekko();
     };
-    const t = setInterval(lekko, 15_000);
+    const t = setInterval(lekko, 30_000);
     document.addEventListener("visibilitychange", wroc);
     return () => {
       clearInterval(t);

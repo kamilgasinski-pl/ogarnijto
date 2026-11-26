@@ -38,8 +38,11 @@ export default async function Pulpit() {
   const do_ = jutro;
   // Niezależne części pulpitu pobieramy równolegle, a nie jedna po drugiej: każde zapytanie to
   // osobna podróż do bazy, więc sekwencja znacznie wydłużała ładowanie (zwłaszcza na telefonie).
+  // Generowanie zadań i lekcji z reguł startuje od razu, równolegle.
+  const rpcPowtarzalne = supabase.rpc("zapewnij_powtarzalne", { p_od: od, p_do: do_ });
+  const rpcTydzien = dzienNr > 5 ? null : supabase.rpc("zapewnij_tydzien", { p_tydzien_start: poniedzialek(dzis) });
   const zadaniaIPodzadania = async () => {
-    await supabase.rpc("zapewnij_powtarzalne", { p_od: od, p_do: do_ });
+    await rpcPowtarzalne;
     // Zadania: niewykonane do jutra (w tym zaległe) oraz wszystko z dziś i jutra.
     let zapytanieZadan = supabase
       .from("zadania")
@@ -82,8 +85,8 @@ export default async function Pulpit() {
   type Lekcja = { id: string; start: number; koniec: number; nazwa: string; sala: string | null; status: string; zmiany: string[]; uwagi: string | null };
   const lekcjeDnia = async (): Promise<Lekcja[]> => {
     if (dzienNr > 5) return [];
-    await supabase.rpc("zapewnij_tydzien", { p_tydzien_start: poniedzialek(dzis) });
-    const [{ data: bloki }, { data: przedmioty }] = await Promise.all([
+    await rpcTydzien;
+    const [{ data: bloki }, { data: przedmioty }, { data: szablonDb }] = await Promise.all([
       supabase
         .from("bloki_planu")
         .select("id, linia_id, godz_start, godz_koniec, przedmiot_id, sala, status, uwagi")
@@ -91,13 +94,10 @@ export default async function Pulpit() {
         .eq("dzien", dzienNr)
         .order("godz_start"),
       supabase.from("przedmioty").select("id, nazwa"),
+      supabase.from("bloki_szablonu").select("id, godz_start, godz_koniec, przedmiot_id, sala"),
     ]);
     const nazwy = new Map((przedmioty ?? []).map((p) => [p.id as string, p.nazwa as string]));
     // Porównanie ze stałym szablonem planu: wykrywamy zmianę godziny, sali albo przedmiotu na dziś.
-    const { data: szablonDb } = await supabase
-      .from("bloki_szablonu")
-      .select("id, godz_start, godz_koniec, przedmiot_id, sala")
-      .in("id", (bloki ?? []).map((b) => b.linia_id as string));
     const szablon = new Map((szablonDb ?? []).map((x) => [x.id as string, x]));
     return (bloki ?? []).map((b) => {
       const start = naMinuty(b.godz_start as string);
