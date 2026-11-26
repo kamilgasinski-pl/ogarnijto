@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
 import { dzienMiesiac, dzienTygodnia } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import { Czas } from "@/components/ui/czas";
-import { Label, Textarea } from "@/components/ui/input";
+import { Input, Label, Select, Textarea } from "@/components/ui/input";
+import { RODZAJE, type Rodzaj } from "@/lib/dojazdy";
 import { DNI_KROTKO } from "@/lib/zadania";
 
 export type CelWyjatku = {
@@ -19,7 +20,10 @@ export type CelWyjatku = {
   koniec: string | null;
   odwolany: boolean;
   maWyjatek: boolean;
-  notatka?: string | null;
+  notatka?: string | null; // notatka na ten dzień (domyślnie notatka dojazdu)
+  opisDomyslny?: string | null;
+  rodzaj?: Rodzaj;
+  przypisanoId?: string | null;
 };
 
 /** Zmiana pojedynczego dnia dojazdu: inna godzina, odwołanie albo powrót do standardu. */
@@ -29,6 +33,23 @@ export function ArkuszWyjatku({ cel, onZamknij }: { cel: CelWyjatku; onZamknij: 
   const [od, setOd] = useState(cel.start);
   const [do_, setDo] = useState(cel.koniec ?? "");
   const [notatka, setNotatka] = useState(cel.notatka ?? "");
+  const [rodzaj, setRodzaj] = useState<Rodzaj>(cel.rodzaj ?? "autobus");
+  const [nazwa, setNazwa] = useState(cel.tytul);
+  const [osobaId, setOsobaId] = useState(cel.przypisanoId ?? "");
+  const [osoby, setOsoby] = useState<{ id: string; imie: string }[]>([]);
+  useEffect(() => {
+    let aktywny = true;
+    supabase
+      .from("osoby")
+      .select("id, imie")
+      .order("imie")
+      .then(({ data }) => {
+        if (aktywny) setOsoby((data ?? []) as { id: string; imie: string }[]);
+      });
+    return () => {
+      aktywny = false;
+    };
+  }, [supabase]);
   const [blad, setBlad] = useState<string | null>(null);
   const [trwa, setTrwa] = useState(false);
 
@@ -37,7 +58,7 @@ export function ArkuszWyjatku({ cel, onZamknij }: { cel: CelWyjatku; onZamknij: 
     setTrwa(true);
     const { error } = await supabase
       .from("dojazdy_wyjatki")
-      .upsert({ rodzina_id: cel.rodzinaId, dojazd_id: cel.dojazdId, data: cel.data, notatka: notatka.trim() || null, ...pola }, { onConflict: "dojazd_id,data" });
+      .upsert({ rodzina_id: cel.rodzinaId, dojazd_id: cel.dojazdId, data: cel.data, notatka: notatka.trim() && notatka.trim() !== (cel.opisDomyslny ?? "").trim() ? notatka.trim() : null, rodzaj, przypisano_id: osobaId || null, tytul: nazwa.trim() || null, ...pola }, { onConflict: "dojazd_id,data" });
     setTrwa(false);
     if (error) return setBlad(tlumaczBlad(error.message));
     onZamknij();
@@ -71,6 +92,29 @@ export function ArkuszWyjatku({ cel, onZamknij }: { cel: CelWyjatku; onZamknij: 
           <div className="space-y-1.5">
             <Label>Godzina do</Label>
             <Czas opcjonalny wartosc={do_} onZmien={setDo} />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="nazwa-wyjatku">Nazwa</Label>
+          <Input id="nazwa-wyjatku" value={nazwa} onChange={(e) => setNazwa(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="rodzaj-wyjatku">Środek transportu</Label>
+            <Select id="rodzaj-wyjatku" value={rodzaj} onChange={(e) => setRodzaj(e.target.value as Rodzaj)}>
+              {RODZAJE.map((r) => (
+                <option key={r.wartosc} value={r.wartosc}>{r.etykieta}</option>
+              ))}
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="osoba-wyjatku">Kto</Label>
+            <Select id="osoba-wyjatku" value={osobaId} onChange={(e) => setOsobaId(e.target.value)}>
+              <option value="">— jak w rozkładzie —</option>
+              {osoby.map((o) => (
+                <option key={o.id} value={o.id}>{o.imie}</option>
+              ))}
+            </Select>
           </div>
         </div>
         <div className="space-y-1.5">

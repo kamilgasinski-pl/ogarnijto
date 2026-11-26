@@ -321,7 +321,7 @@ export function Planer({ tryb, tydzien, rodzinaId, dzis, przedmioty: p0, testy =
                             onClick={(e) => {
                               e.stopPropagation();
                               const w = d.wyjatek!;
-                              setWyjatek({ rodzinaId, dojazdId: w.dojazdId, tytul: d.tytul, data: w.data, start: w.start, koniec: w.koniec, odwolany: d.odwolany, maWyjatek: w.maWyjatek, notatka: d.notatka });
+                              setWyjatek({ rodzinaId, dojazdId: w.dojazdId, tytul: d.tytul, data: w.data, start: w.start, koniec: w.koniec, odwolany: d.odwolany, maWyjatek: w.maWyjatek, notatka: w.notatka ?? null, opisDomyslny: w.opisDomyslny ?? null, rodzaj: d.rodzaj, przypisanoId: d.przypisano_id });
                             }}
                             className="pointer-events-auto absolute right-0.5 top-0.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-sm ring-1 ring-gray-300 hover:bg-white"
                           >

@@ -154,6 +154,8 @@ export default async function PlanPage({ searchParams }: Props) {
             start: naCzas(x.start),
             koniec: x.koniec != null ? naCzas(x.koniec) : null,
             maWyjatek: !!x.wyjatek,
+            notatka: x.wyjatek?.notatka ?? x.dojazd.opis ?? null,
+            opisDomyslny: x.dojazd.opis ?? null,
           },
         }))}
       />

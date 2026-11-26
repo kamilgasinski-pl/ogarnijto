@@ -63,10 +63,13 @@ export type Wyjatek = {
   godz_start: string | null;
   godz_koniec: string | null;
   notatka: string | null;
+  rodzaj: Rodzaj | null;
+  przypisano_id: string | null;
+  tytul: string | null;
 };
 
 export const KOLUMNY_DOJAZDOW = "id, rodzaj, kierunek, tytul, opis, dni, godz_start, godz_koniec, przypisano_id, od, do_dnia";
-export const KOLUMNY_WYJATKOW = "id, dojazd_id, data, odwolany, godz_start, godz_koniec, notatka";
+export const KOLUMNY_WYJATKOW = "id, dojazd_id, data, odwolany, godz_start, godz_koniec, notatka, rodzaj, przypisano_id, tytul";
 
 /** Konkretny dojazd w konkretnym dniu, po uwzględnieniu wyjątków. */
 export type Wystapienie = {
@@ -92,7 +95,8 @@ export function wystapienia(dojazdy: Dojazd[], wyjatki: Wyjatek[], od: string, d
       const gs = w?.godz_start ?? d.godz_start;
       const gk = w?.godz_start ? w.godz_koniec : (w?.godz_koniec ?? d.godz_koniec);
       wynik.push({
-        dojazd: d,
+        // Zmiana jednego dnia może podmienić środek transportu i osobę.
+        dojazd: w ? { ...d, rodzaj: w.rodzaj ?? d.rodzaj, przypisano_id: w.przypisano_id ?? d.przypisano_id, tytul: w.tytul ?? d.tytul } : d,
         data,
         dzien,
         start: naMinuty(gs),

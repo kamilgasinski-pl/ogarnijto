@@ -188,8 +188,9 @@ export default async function Pulpit() {
       odwolany: w.odwolany,
       zmieniony: w.zmieniony,
       maWyjatek: !!w.wyjatek,
-      notatka: w.wyjatek?.notatka ?? null,
-      opis: [w.wyjatek?.notatka, w.dojazd.opis].filter(Boolean).join("\n") || null,
+      notatka: w.wyjatek?.notatka ?? w.dojazd.opis ?? null,
+      opisDomyslny: w.dojazd.opis ?? null,
+      opis: w.wyjatek?.notatka || w.dojazd.opis || null,
       bylo: w.zmieniony ? naCzas(naMinuty(w.dojazd.godz_start)) : null,
     }));
 

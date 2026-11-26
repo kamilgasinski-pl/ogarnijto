@@ -239,7 +239,10 @@ export function Dojazdy({ tydzien, dojazdy, wyjatki, osoby, rodzinaId, mojeId, d
             koniec: zmiana.w.koniec != null ? naCzas(zmiana.w.koniec) : null,
             odwolany: zmiana.w.odwolany,
             maWyjatek: !!zmiana.w.wyjatek,
-            notatka: zmiana.w.wyjatek?.notatka ?? null,
+            notatka: zmiana.w.wyjatek?.notatka ?? zmiana.w.dojazd.opis ?? null,
+            opisDomyslny: zmiana.w.dojazd.opis ?? null,
+            rodzaj: zmiana.w.dojazd.rodzaj,
+            przypisanoId: zmiana.w.dojazd.przypisano_id,
           }}
         />
       )}
