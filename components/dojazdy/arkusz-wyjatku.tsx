@@ -65,6 +65,23 @@ export function ArkuszWyjatku({ cel, onZamknij }: { cel: CelWyjatku; onZamknij: 
     router.refresh();
   }
 
+  // Kliknięcie poza oknem: jeśli cokolwiek zmieniono, zapisujemy zmianę zamiast ją gubić.
+  function zamknijZZapisem() {
+    if (trwa) return;
+    const zmieniono =
+      od !== cel.start ||
+      do_ !== (cel.koniec ?? "") ||
+      notatka !== (cel.notatka ?? "") ||
+      rodzaj !== (cel.rodzaj ?? "autobus") ||
+      nazwa !== cel.tytul ||
+      osobaId !== (cel.przypisanoId ?? "");
+    if (!zmieniono) return onZamknij();
+    if (do_ && do_ <= od) return setBlad("Koniec musi być później niż początek.");
+    const bezZmianyGodzin = od === cel.start && do_ === (cel.koniec ?? "");
+    if (cel.odwolany && bezZmianyGodzin) return void zapisz({ odwolany: true, godz_start: null, godz_koniec: null });
+    void zapisz({ odwolany: false, godz_start: od, godz_koniec: do_ || null });
+  }
+
   async function przywroc() {
     setBlad(null);
     setTrwa(true);
@@ -76,7 +93,7 @@ export function ArkuszWyjatku({ cel, onZamknij }: { cel: CelWyjatku; onZamknij: 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center" onClick={(e) => e.target === e.currentTarget && onZamknij()}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center" onClick={(e) => e.target === e.currentTarget && zamknijZZapisem()}>
       <div className="w-full space-y-4 rounded-t-2xl bg-white p-5 md:max-w-md md:rounded-2xl">
         <h2 className="text-lg font-semibold">
           {cel.tytul}

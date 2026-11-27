@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Plus, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { tlumaczBlad } from "@/lib/bledy";
@@ -75,6 +75,15 @@ export function ArkuszZadania({
   function zmienListe(l: Podzadanie[]) {
     setLista(l);
     onPodzadania(zadanie.id, l);
+  }
+
+  const stanPoczatkowy = useRef(JSON.stringify([z, od, do_, osoba]));
+  const formularz = useRef<HTMLFormElement>(null);
+  // Kliknięcie poza oknem: zmiany zapisujemy (zamiast gubić); bez zmian po prostu zamykamy.
+  function zamknijZZapisem() {
+    if (trwa) return;
+    if (JSON.stringify([z, od, do_, osoba]) === stanPoczatkowy.current) return onZamknij();
+    formularz.current?.requestSubmit();
   }
 
   async function zapisz(e: React.FormEvent) {
@@ -171,9 +180,10 @@ export function ArkuszZadania({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center"
-      onClick={(e) => e.target === e.currentTarget && onZamknij()}
+      onClick={(e) => e.target === e.currentTarget && zamknijZZapisem()}
     >
       <form
+        ref={formularz}
         onSubmit={zapisz}
         className="max-h-[92vh] w-full space-y-4 overflow-y-auto rounded-t-2xl bg-white p-5 md:max-w-lg md:rounded-2xl"
       >
